@@ -1,0 +1,9 @@
+services:
+  backup_3ds:
+    container_name: backup_3ds
+    build: ./
+    environment:
+      - FTPD_3DS_ADDRESS=${FTPD_3DS_ADDRESS}
+      - FTPD_3DS_PORT=${FTPD_3DS_PORT}
+    volumes:
+      - "./data:/var/lib/3ds_backup"

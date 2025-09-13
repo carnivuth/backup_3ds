@@ -1,0 +1,4 @@
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+* * * * * root /usr/local/bin/3ds_backup.sh backup > /proc/1/fd/1 2>&1
+*/10 * * * * root /usr/local/bin/3ds_backup.sh reset > /proc/1/fd/1 2>&1
