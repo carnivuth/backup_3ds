@@ -22,7 +22,10 @@ function backup(){
 
   echo "connecting to $FTPD_3DS_ADDRESS $FTPD_3DS_PORT"
   echo 2 > "$STAT_FILE"
-  ncftpget -R -P "$FTPD_3DS_PORT" "$FTPD_3DS_ADDRESS" "$BACKUP_DEST" /
+  timestamp="$(date +%s)"
+  mkdir $BACKUP_DEST/$timestamp
+  ncftpget -d stdout -R -P "$FTPD_3DS_PORT" "$FTPD_3DS_ADDRESS" "$BACKUP_DEST/$timestamp" /
+  tar -czvf  "$BACKUP_DEST/$timestamp.tar.gz" "$BACKUP_DEST/$timestamp"
   echo "done backup"
   echo 0 > "$STAT_FILE"
 
