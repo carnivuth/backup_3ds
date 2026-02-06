@@ -1,3 +1,4 @@
+---
 services:
   backup_3ds:
     container_name: backup_3ds
@@ -5,5 +6,16 @@ services:
     environment:
       - FTPD_3DS_ADDRESS=${FTPD_3DS_ADDRESS}
       - FTPD_3DS_PORT=${FTPD_3DS_PORT}
+      - BACKUP_SRC=/3ds/Checkpoint/saves
     volumes:
       - "/tmp/backup_3ds:/var/lib/3ds_backup"
+    develop:
+      watch:
+        - path: ./Dockerfile
+          action: rebuild
+        - path: ./3ds_backup.sh
+          action: rebuild
+        - path: ./crontab
+          action: rebuild
+        - path: ./docker-compose.yaml
+          action: rebuild
