@@ -6,7 +6,7 @@ log_inner() {
 
 # check on env vars
 if [[ -z $FTPD_3DS_ADDRESS ]]; then log_inner error "Set server address trough FTPD_3DS_ADDRESS env var"; exit 1; fi
-if [[ -z $FTPD_3DS_PORT ]]; then log_inner error "Set server port trough FTPD_3DS_PORT env var"; exit 1; fi
+if [[ -z $FTPD_3DS_PORT ]]; then FTPD_3DS_PORT=21; exit 1; fi
 
 # directories
 if [[ -z $BASE_DIR ]];then BASE_DIR=/var/lib/3ds_backup; fi
@@ -15,7 +15,7 @@ if [[ ! -d "$BASE_DIR" ]]; then mkdir -p "$BASE_DIR"; fi
 if [[ -z $BACKUP_DEST ]];then BACKUP_DEST="$BASE_DIR/backup"; fi
 if [[ ! -d "$BACKUP_DEST" ]]; then mkdir -p "$BACKUP_DEST"; fi
 
-# stat file to share information between cron spawned instances of the script
+# stat file to share information between cron instances of the script
 if [[ -z $STAT_FILE ]];then STAT_FILE="/tmp/status"; fi
 if [[ ! -f "$STAT_FILE" ]]; then echo 1 > "$STAT_FILE"; fi
 
@@ -40,7 +40,7 @@ function backup(){
   timestamp="$(date +%s)"
   mkdir $BACKUP_DEST/$timestamp
   log_inner info "creating backup $BACKUP_DEST/$timestamp of $BACKUP_SRC"
-  ncftpget -d stdout -R -P "$FTPD_3DS_PORT" "$FTPD_3DS_ADDRESS" "$BACKUP_DEST/$timestamp" "$BACKUP_SRC"
+  ncftpget -u "$FTPD_3DS_USERNAME" -p "$FTPD_3DS_PASSWORD" -d stdout -R -P "$FTPD_3DS_PORT" "$FTPD_3DS_ADDRESS" "$BACKUP_DEST/$timestamp" "$BACKUP_SRC"
   tar -czvf  "$BACKUP_DEST/$timestamp.tar.gz" "$BACKUP_DEST/$timestamp"
   rm -r "$BACKUP_DEST/$timestamp"
   log_inner info "done backup $BACKUP_DEST/$timestamp"
