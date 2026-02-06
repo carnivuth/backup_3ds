@@ -12,7 +12,7 @@ if [[ -z $FTPD_3DS_PORT ]]; then FTPD_3DS_PORT=21; exit 1; fi
 if [[ -z $BASE_DIR ]];then BASE_DIR=/var/lib/3ds_backup; fi
 if [[ ! -d "$BASE_DIR" ]]; then mkdir -p "$BASE_DIR"; fi
 
-if [[ -z $BACKUP_DEST ]];then BACKUP_DEST="$BASE_DIR/backup"; fi
+if [[ -z $BACKUP_DEST ]];then BACKUP_DEST="$BASE_DIR/backups"; fi
 if [[ ! -d "$BACKUP_DEST" ]]; then mkdir -p "$BACKUP_DEST"; fi
 
 # stat file to share information between cron instances of the script
