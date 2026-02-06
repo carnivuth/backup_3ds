@@ -1,4 +1,4 @@
-FROM debian:bookworm
+FROM debian:13.3-slim
 
 RUN apt update
 
@@ -14,5 +14,7 @@ RUN chown root:root /etc/crontab
 WORKDIR /usr/local/bin
 COPY 3ds_backup.sh .
 COPY start.sh .
+
+RUN chmod +x 3ds_backup.sh start.sh
 
 CMD [ "./start.sh" ]
