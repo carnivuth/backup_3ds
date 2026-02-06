@@ -2,6 +2,20 @@
 
 Make backups of 3ds using ftpd periodically, all in docker container 🐳
 
+```mermaid
+---
+config:
+    look: handDrawn
+---
+flowchart LR
+subgraph home network
+direction LR
+A@{shape: proc, label: backup_3ds}
+B@{shape: db, label: 3DS}
+A -- connects and dumps data --> B
+end
+```
+
 ## Features
 
 - **Automated Backups**: Uses cron to run a backup script
