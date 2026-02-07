@@ -72,10 +72,10 @@ The following environment variables are used to configure the backup container:
 | Variable | Description | Default Value | Required |
 |----------|-------------|---------------|----------|
 | `FTPD_3DS_ADDRESS` | The IP address of your Nintendo 3DS running FTPD | None | Yes |
-| `FTPD_3DS_PORT` | The port number that FTPD is listening on | `21` | No |
+| `FTPD_3DS_PORT` | The port number that FTPD is listening on | `21` | Yes |
 | `FTPD_3DS_USERNAME` | The ftp username used to authenticate to the 3DS | None | No |
 | `FTPD_3DS_PASSWORD` | The ftp password used to authenticate to the 3DS | None | No |
-| `BACKUP_SRC` | The path to backup from the 3ds, for example to backup [checkpoint](https://github.com/BernardoGiordano/Checkpoint/releases) data `/3ds/Checkpoint/saves` | `/` | No |
+| `BACKUP_SRC` | List of paths to backup from the 3ds separated by `;`, for example to backup [checkpoint](https://github.com/BernardoGiordano/Checkpoint/releases) data and the `DCIM` directory `/3ds/Checkpoint/saves;/DCIM` | `/` | No |
 | `BASE_DIR` | Base directory for data file | `/var/lib/3ds_backup` | No |
 | `BACKUP_DEST` | Base directory for backups | `/var/lib/3ds_backup/backups` | No |
 | `STAT_FILE` | Path to the stat file for managing multiple instances of the script | `/tmp/status` | No |
