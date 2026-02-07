@@ -33,17 +33,27 @@ function backup(){
   # check if 3ds backup is running
   if [[ $(cat "$STAT_FILE") == "2" ]]; then log_inner info "backup is running since $(stat -c '%y' "$STAT_FILE")"; exit 0; fi
 
-  log_inner info "connecting to $FTPD_3DS_ADDRESS $FTPD_3DS_PORT"
+  log_inner info "starting backup of 3DS address at $FTPD_3DS_ADDRESS:$FTPD_3DS_PORT"
   # setting status on status file to avoid running multiple backup jobs
   echo 2 > "$STAT_FILE"
 
   timestamp="$(date +%s)"
-  mkdir $BACKUP_DEST/$timestamp
-  log_inner info "creating backup $BACKUP_DEST/$timestamp of $BACKUP_SRC"
-  ncftpget -u "$FTPD_3DS_USERNAME" -p "$FTPD_3DS_PASSWORD" -d stdout -R -P "$FTPD_3DS_PORT" "$FTPD_3DS_ADDRESS" "$BACKUP_DEST/$timestamp" "$BACKUP_SRC"
-  tar -czvf  "$BACKUP_DEST/$timestamp.tar.gz" "$BACKUP_DEST/$timestamp"
-  rm -r "$BACKUP_DEST/$timestamp"
-  log_inner info "done backup $BACKUP_DEST/$timestamp"
+  IFS=';' read -ra dirs <<< "$BACKUP_SRC"
+  for dir in ${dirs[@]}; do
+
+    dirname="$(basename "$dir")"
+    mkdir "$BACKUP_DEST/${timestamp}_$dirname"
+    log_inner info "creating backup $BACKUP_DEST/${timestamp}_$dir of $dirname"
+
+    # check for error codes and print error otherwise
+    if ncftpget -R -v -u "$FTPD_3DS_USERNAME" -p "$FTPD_3DS_PASSWORD" -P "$FTPD_3DS_PORT" "$FTPD_3DS_ADDRESS" "$BACKUP_DEST/${timestamp}_${dirname}" "$dir"; then
+      tar -czf "$BACKUP_DEST/${timestamp}_${dirname}.tar.gz" -C "$BACKUP_DEST" "${timestamp}_${dirname}" || log_inner error "error archiving ${BACKUP_DEST}/${timestamp}_${dirname}"
+      rm -r "$BACKUP_DEST/${timestamp}_$dirname"
+      log_inner info "done backup $BACKUP_DEST/${timestamp}_$dirname"
+    else
+      log_inner error "error in downloading $dir from $FTPD_3DS_ADDRESS"
+    fi
+  done
 
   # setting status file to "backup done" to avoid consequent backups
   echo 0 > "$STAT_FILE"
