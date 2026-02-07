@@ -24,6 +24,4 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           push: true
-          tags:
-            - carnivuth/backup_3ds:${{ github.ref_name }}
-            - carnivuth/backup_3ds:latest
+          tags: carnivuth/backup_3ds:${{ github.ref_name }},carnivuth/backup_3ds:latest
