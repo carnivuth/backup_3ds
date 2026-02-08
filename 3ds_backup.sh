@@ -41,7 +41,7 @@ function backup(){
   IFS=';' read -ra dirs <<< "$BACKUP_SRC"
   for dir in ${dirs[@]}; do
 
-    dirname="$(basename "$dir")"
+    dirname="$(echo "$dir" | sed 's/\//-/g')"
     mkdir "$BACKUP_DEST/${timestamp}_$dirname"
     log_inner info "creating backup $BACKUP_DEST/${timestamp}_$dir of $dirname"
 
