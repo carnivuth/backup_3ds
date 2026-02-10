@@ -36,6 +36,8 @@ Before using this backup solution, ensure you have:
 
 ### Using Docker Compose
 
+Just copy and paste this compose file and customize variables and mountpoints as needed
+
 ```yaml
 ---
 services:
@@ -47,7 +49,7 @@ services:
       - FTPD_3DS_PORT=insert you 3DS ftp port
     volumes:
       # where backups are stored
-      - "your data directory:/var/lib/3ds_backup"
+      - "your data directory:/var/lib/backup_3ds"
 ```
 
 ### Using Docker Run
@@ -59,7 +61,7 @@ docker run -d \
   --name backup_3ds \
   -e FTPD_3DS_ADDRESS=192.168.1.XXX \
   -e FTPD_3DS_PORT=your 3DS ftp port \
-  -v ./data:/var/lib/3ds_backup \
+  -v ./data:/var/lib/backup_3ds \
   carnivuth/backup_3ds:latest
 ```
 
@@ -69,6 +71,7 @@ docker run -d \
 
 The following environment variables are used to configure the backup container:
 
+
 | Variable | Description | Default Value | Required |
 |----------|-------------|---------------|----------|
 | `FTPD_3DS_ADDRESS` | The IP address of your Nintendo 3DS running FTPD | None | Yes |
@@ -76,8 +79,8 @@ The following environment variables are used to configure the backup container:
 | `FTPD_3DS_USERNAME` | The ftp username used to authenticate to the 3DS | None | No |
 | `FTPD_3DS_PASSWORD` | The ftp password used to authenticate to the 3DS | None | No |
 | `BACKUP_SRC` | List of paths to backup from the 3ds separated by `;`, for example to backup [checkpoint](https://github.com/BernardoGiordano/Checkpoint/releases) data and the `DCIM` directory `/3ds/Checkpoint/saves;/DCIM` | `/` | No |
-| `BASE_DIR` | Base directory for data file | `/var/lib/3ds_backup` | No |
-| `BACKUP_DEST` | Base directory for backups | `/var/lib/3ds_backup/backups` | No |
+| `BASE_DIR` | Base directory for data file | `/var/lib/backup_3ds` | No |
+| `BACKUP_DEST` | Base directory for backups | `/var/lib/backup_3ds/backups` | No |
 | `STAT_FILE` | Path to the stat file for managing multiple instances of the script | `/tmp/status` | No |
 
 
