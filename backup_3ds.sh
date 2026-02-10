@@ -41,10 +41,10 @@ function backup(){
   if [[ ! -d "$host_dir" ]]; then mkdir -p "$host_dir"; fi
 
   # check if 3ds backup is running
-  if [[ $(cat "$stat_file") == "2" ]]; then log_inner info "backup is running since $(stat -c '%y' "$stat_file")"; return 2; fi
+  if [[ $(cat "$stat_file") == "2" ]]; then log_inner info "backup of ${address} is running since $(stat -c '%y' "$stat_file")"; return 2; fi
 
   # check if 3ds backup has been made
-  if [[ $(cat "$stat_file") == "0" ]]; then log_inner info "backup has already been made at $(stat -c '%y' "$stat_file")"; return 1; fi
+  if [[ $(cat "$stat_file") == "0" ]]; then log_inner info "backup of ${address} has already been made at $(stat -c '%y' "$stat_file")"; return 1; fi
 
   # check if 3ds ftp server is up
   if ! nc -z -w1 "$address" "$port"; then log_inner info "3ds at ${address}:${port} is not listening for ftp connections"; return 3; fi
@@ -71,7 +71,7 @@ function backup(){
 
       # removing downloaded files
       rm -fr "${host_dir}/${timestamp}_${dirname}"
-      log_inner info "done backup ${host_dir}/${timestamp}_${dirname}"
+      log_inner info "done backup of ${host_dir}/${timestamp}_${dirname} from ${address}"
 
     else
       log_inner error "error in downloading ${dir} from ${address}"
@@ -89,7 +89,7 @@ function reset(){
 
   stat_file="${STAT_DIR}/${address}"
   # check if 3ds backup is running
-  if [[ $(cat "$stat_file") == "2" ]]; then log_inner info "backup is running since $(stat -c '%y' "$STAT_FILE"), avoid resetting"; return 0; fi
+  if [[ $(cat "$stat_file") == "2" ]]; then log_inner info "backup for $address is running since $(stat -c '%y' "$STAT_FILE"), avoid resetting"; return 0; fi
 
   echo 1 > "$stat_file"
 }
