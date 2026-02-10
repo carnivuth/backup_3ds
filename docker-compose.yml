@@ -4,34 +4,48 @@ services:
     container_name: backup_3ds
     build: ./
     environment:
-      - FTPD_3DS_ADDRESS=backup_3ds_ftp_server
-      - FTPD_3DS_PORT=21
-      - FTPD_3DS_USERNAME=ds
-      - FTPD_3DS_PASSWORD=ds
-      - BACKUP_SRC=/home/ds
+      - FTPD_3DS_ADDRESSES=backup_3ds_ftp_server_1;backup_3ds_ftp_server_2
+      - FTPD_3DS_PORTS=21;21
+      - FTPD_3DS_USERNAMES=ds;ds
+      - FTPD_3DS_PASSWORDS=supersecretpassword;supersecretpassword
+      - BACKUP_DIRS=/home/ds
     volumes:
-      - "/tmp/backup_3ds:/var/lib/3ds_backup"
+      - "/tmp/backup_3ds:/var/lib/backup_3ds"
     depends_on:
-      backup_3ds_ftp_server:
+      backup_3ds_ftp_server_1:
+        condition: service_started
+      backup_3ds_ftp_server_2:
         condition: service_started
     develop:
       watch:
         - path: ./Dockerfile
           action: rebuild
-        - path: ./3ds_backup.sh
+        - path: ./backup_3ds.sh
           action: rebuild
         - path: ./crontab
           action: rebuild
         - path: ./docker-compose.yaml
           action: rebuild
 
-  # ftp server for debugging
-  backup_3ds_ftp_server:
-    container_name: backup_3ds_ftp_server
-    image: stilliard/pure-ftpd
+  # ftp servers for debugging
+  backup_3ds_ftp_server_1:
+    container_name: backup_3ds_ftp_server_1
+    image: delfer/alpine-ftp-server
     environment:
-      - FTP_USER_NAME=ds
-      - FTP_USER_PASS=ds
-      - FTP_USER_HOME=/home/ds
+      - "USERS=ds|supersecretpassword|/home/ds|1000"
+      - ADDRESS=backup_3ds_ftp_server_1
+    expose:
+      - 21
     volumes:
-      - "./data:/home/ds"
+      - "./debug/data1:/home/ds"
+
+  backup_3ds_ftp_server_2:
+    container_name: backup_3ds_ftp_server_2
+    image: delfer/alpine-ftp-server
+    environment:
+      - "USERS=ds|supersecretpassword|/home/ds|1000"
+      - ADDRESS=backup_3ds_ftp_server_2
+    expose:
+      - 21
+    volumes:
+      - "./debug/data2:/home/ds"

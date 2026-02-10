@@ -1,7 +1,9 @@
 SHELL=/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+
 # run  backup function every minute
-* * * * * root /usr/local/bin/3ds_backup.sh backup > /proc/1/fd/1 2>&1
-@reboot root /usr/local/bin/3ds_backup.sh backup > /proc/1/fd/1 2>&1
+* * * * * root /usr/local/bin/backup_3ds.sh backup_cronjob > /proc/1/fd/1 2>&1
+@reboot root /usr/local/bin/backup_3ds.sh backup_cronjob > /proc/1/fd/1 2>&1
+
 # reset backup status every 10 minutes, tweak this to change the backup frequency
-*/10 * * * * root /usr/local/bin/3ds_backup.sh reset > /proc/1/fd/1 2>&1
+*/10 * * * * root /usr/local/bin/backup_3ds.sh reset_cronjob > /proc/1/fd/1 2>&1
