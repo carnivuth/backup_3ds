@@ -4,7 +4,6 @@ log_inner() {
         echo "[${BASH_SOURCE##*/}:${1^^}] ${FUNCNAME[2]}@${BASH_LINENO[1]}: ${*:2}"
 }
 
-# ENVIRONMENT PARSING
 # check if 3ds address variable is set, exit otherwise
 if [[ -z $FTPD_3DS_ADDRESSES ]]; then log_inner error "Set server address trough FTPD_3DS_ADDRESSES env var"; exit 1; fi
 
@@ -28,7 +27,7 @@ if [[ -z $BACKUP_DIRS ]];then BACKUP_DIRS="/"; fi
 # backup a single 3ds, parameters address port username password
 function backup(){
 
-  if [[ -z $1 ]];then log_inner error "Set server address trough FTPD_3DS_ADDRESSES env var"; return 4; else address="$1"; fi
+  if [[ -z $1 ]];then log_inner error "pass address as parameter"; return 4; else address="$1"; fi
   if [[ -z $2 ]];then port=21; else port="$2"; fi
   username=$3
   password=$4
@@ -66,18 +65,33 @@ function backup(){
 
     # check for error codes and print error otherwise
     if ncftpget -R -v -u "$username" -p "$password" -P "${port}" "${address}" "${host_dir}/${timestamp}_${dirname}" "${dir}"; then
+
       # compress backup
-      echo tar -czf "${host_dir}/${timestamp}_${dirname}.tar.gz" -C "${host_dir}" "${timestamp}_${dirname}" || log_inner error "error archiving ${host_dir}/${timestamp}_${dirname}"
-      tar -czf "${host_dir}/${timestamp}_${dirname}.tar.gz" -C "${host_dir}" "${timestamp}_${dirname}" || log_inner error "error archiving ${host_dir}/${timestamp}_${dirname}"
-      rm -r "${host_dir}/${timestamp}_${dirname}"
+      ( cd ${host_dir} && zip -r "${timestamp}_${dirname}.zip"  "${timestamp}_${dirname}") || log_inner error "error archiving ${host_dir}/${timestamp}_${dirname}"
+
+      # removing downloaded files
+      rm -fr "${host_dir}/${timestamp}_${dirname}"
       log_inner info "done backup ${host_dir}/${timestamp}_${dirname}"
+
     else
       log_inner error "error in downloading ${dir} from ${address}"
     fi
+
   done
 
   # setting status file to "backup done" to avoid consequent backups
   echo 0 > "$stat_file"
+}
+
+function reset(){
+
+  if [[ -z $1 ]];then log_inner error "pass 3ds address as parameter"; return 1; else address="$1"; fi
+
+  stat_file="${STAT_DIR}/${address}"
+  # check if 3ds backup is running
+  if [[ $(cat "$stat_file") == "2" ]]; then log_inner info "backup is running since $(stat -c '%y' "$STAT_FILE"), avoid resetting"; return 0; fi
+
+  echo 1 > "$stat_file"
 }
 
 # main function that loops the given hosts and runs the backup script
@@ -93,22 +107,24 @@ function backup_cronjob(){
 
 }
 
-function reset(){
+function reset_cronjob(){
 
-  # check if 3ds backup is running
-  if [[ $(cat "$STAT_FILE") == "2" ]]; then log_inner info "backup is running since $(stat -c '%y' "$STAT_FILE"), avoid resetting"; exit 0; fi
+  IFS=';' read -ra addresses <<< "$FTPD_3DS_ADDRESSES"
+  for index in "${!addresses[@]}"; do
+    reset "${addresses[$index]}"
+  done
 
-  echo 1 > "$STAT_FILE"
 }
+
 
 case "$1" in
   "backup_cronjob")
     backup_cronjob
     ;;
-  "reset")
-    reset
+  "reset_cronjob")
+    reset_cronjob
     ;;
   *)
-    log_inner error "usage: $0 backup/reset"
+    log_inner error "usage: $0 backup_cronjob/reset_cronjob"
     ;;
 esac

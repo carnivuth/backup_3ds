@@ -45,8 +45,7 @@ services:
     container_name: backup_3ds
     image: carnivuth/backup_3ds:latest
     environment:
-      - FTPD_3DS_ADDRESS=insert your 3DS ip address
-      - FTPD_3DS_PORT=insert you 3DS ftp port
+      - FTPD_3DS_ADDRESSES=insert your 3DS ip addresses separated by ;
     volumes:
       # where backups are stored
       - "your data directory:/var/lib/backup_3ds"
@@ -59,8 +58,7 @@ Alternatively, you can run the container directly with Docker:
 ```bash
 docker run -d \
   --name backup_3ds \
-  -e FTPD_3DS_ADDRESS=192.168.1.XXX \
-  -e FTPD_3DS_PORT=your 3DS ftp port \
+  -e FTPD_3DS_ADDRESSES=192.168.1.XXX \
   -v ./data:/var/lib/backup_3ds \
   carnivuth/backup_3ds:latest
 ```
@@ -74,14 +72,11 @@ The following environment variables are used to configure the backup container:
 
 | Variable | Description | Default Value | Required |
 |----------|-------------|---------------|----------|
-| `FTPD_3DS_ADDRESS` | The IP address of your Nintendo 3DS running FTPD | None | Yes |
-| `FTPD_3DS_PORT` | The port number that FTPD is listening on | `21` | Yes |
-| `FTPD_3DS_USERNAME` | The ftp username used to authenticate to the 3DS | None | No |
-| `FTPD_3DS_PASSWORD` | The ftp password used to authenticate to the 3DS | None | No |
-| `BACKUP_SRC` | List of paths to backup from the 3ds separated by `;`, for example to backup [checkpoint](https://github.com/BernardoGiordano/Checkpoint/releases) data and the `DCIM` directory `/3ds/Checkpoint/saves;/DCIM` | `/` | No |
-| `BASE_DIR` | Base directory for data file | `/var/lib/backup_3ds` | No |
-| `BACKUP_DEST` | Base directory for backups | `/var/lib/backup_3ds/backups` | No |
-| `STAT_FILE` | Path to the stat file for managing multiple instances of the script | `/tmp/status` | No |
+| `FTPD_3DS_ADDRESSES` | List of the IP addresses of your Nintendo 3DS running FTPD separated by `;` | None | Yes |
+| `FTPD_3DS_PORT` | List of ports that FTPD is listening on, one for each 3DS configured i `FTPD_3DS_ADDRESSES` | `21` | No |
+| `FTPD_3DS_USERNAMES` | List of ftp usernames used to authenticate to the 3DS, one for each 3DS configured i `FTPD_3DS_ADDRESSES` | None | No |
+| `FTPD_3DS_PASSWORDS` | List of ftp password used to authenticate to the 3DS, one for each 3DS configured i `FTPD_3DS_ADDRESSES` | None | No |
+| `BACKUP_DIRS` | List of paths to backup from the 3ds separated by `;`, for example to backup [checkpoint](https://github.com/BernardoGiordano/Checkpoint/releases) data and saves from nds games saved in `saves` directory `/3ds/Checkpoint/saves;/roms/nds/saves` (assuming nds roms are saved under `/roms/nds`)  | `/` | No |
 
 
 ### Finding Your 3DS FTPD Information
@@ -90,8 +85,8 @@ To find your 3DS IP address and port:
 
 1. Launch FTPD on your Nintendo 3DS
 2. On the top screen, you'll see:
-   - **IP Address** (highlighted in blue) - Use this for `FTPD_3DS_ADDRESS`
-   - **Port** (highlighted in red) - Use this for `FTPD_3DS_PORT`
+   - **IP Address** (highlighted in blue) - Use this for `FTPD_3DS_ADDRESSES`
+   - **Port** (highlighted in red) - Use this for `FTPD_3DS_PORTS`
 3. Keep FTPD running on your 3DS while backups are being performed
 
 **Note**: Ensure your 3DS and the Docker host are on the same local network.
@@ -114,7 +109,7 @@ The backup schedule is controlled by the `crontab` file in the container. By def
 If you encounter permission errors with the backup directory:
 
 ```bash
-sudo chown -R $(id -u):$(id -g) ./data
+sudo chown -R $(id -u):$(id -g) ./YOUR-DATA-DIR
 ```
 
 ## License

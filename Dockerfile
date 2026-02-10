@@ -3,7 +3,7 @@ FROM debian:13.3-slim
 RUN apt update
 
 # install cron and crontab
-RUN apt install -y cron ncftp netcat-traditional
+RUN apt install -y cron ncftp netcat-traditional zip
 
 COPY crontab /etc/
 # set permissions
