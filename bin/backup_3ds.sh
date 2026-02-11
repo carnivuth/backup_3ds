@@ -66,18 +66,18 @@ function backup(){
   for dir in ${dirs_to_backup[@]}; do
 
     dirname="$(echo "${dir}" | sed 's/\//-/g' | sed 's/^-//g')"
-    mkdir "${host_dir}/${timestamp}_${dirname}"
-    log_inner info "creating backup ${host_dir}/${timestamp}_${dirname} of ${dir}"
+    mkdir "${host_dir}/${address}_${timestamp}_${dirname}"
+    log_inner info "creating backup ${host_dir}/${address}_${timestamp}_${dirname} of ${dir}"
 
     # check for error codes and print error otherwise
-    if ncftpget -R -v -u "$username" -p "$password" -P "${port}" "${address}" "${host_dir}/${timestamp}_${dirname}" "${dir}"; then
+    if ncftpget -R -v -u "$username" -p "$password" -P "${port}" "${address}" "${host_dir}/${address}_${timestamp}_${dirname}" "${dir}"; then
 
       # compress backup
-      ( cd ${host_dir} && zip -r "${timestamp}_${dirname}.zip"  "${timestamp}_${dirname}") || log_inner error "error archiving ${host_dir}/${timestamp}_${dirname}"
+      ( cd ${host_dir} && zip -r "${address}_${timestamp}_${dirname}.zip"  "${address}_${timestamp}_${dirname}") || log_inner error "error archiving ${host_dir}/${address}_${timestamp}_${dirname}"
 
       # removing downloaded files
-      rm -fr "${host_dir}/${timestamp}_${dirname}"
-      log_inner info "done backup of ${host_dir}/${timestamp}_${dirname} from ${address}"
+      rm -fr "${host_dir}/${address}_${timestamp}_${dirname}"
+      log_inner info "done backup of ${host_dir}/${address}_${timestamp}_${dirname} from ${address}"
 
     else
       log_inner error "error in downloading ${dir} from ${address}"
