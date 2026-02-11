@@ -9,8 +9,10 @@ services:
       - FTPD_3DS_USERNAMES=ds;ds
       - FTPD_3DS_PASSWORDS=supersecretpassword;supersecretpassword
       - BACKUP_DIRS=/home/ds
+    ports:
+      - 8080:80
     volumes:
-      - "/tmp/backup_3ds:/var/lib/backup_3ds"
+      - "/tmp/backup_3ds:/var/lib/backup_3ds/backups"
     depends_on:
       backup_3ds_ftp_server_1:
         condition: service_started
@@ -18,12 +20,23 @@ services:
         condition: service_started
     develop:
       watch:
+
+        - path: ./dashboard/style/style.css
+          action: sync+restart
+          target: /var/lib/backup_3ds/dashboard/static/style.css
+
+        - path: ./dashboard/templates
+          action: rebuild
+
         - path: ./Dockerfile
           action: rebuild
-        - path: ./backup_3ds.sh
+
+        - path: ./bin
           action: rebuild
-        - path: ./crontab
+
+        - path: ./etc
           action: rebuild
+
         - path: ./docker-compose.yaml
           action: rebuild
 
