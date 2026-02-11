@@ -39,7 +39,7 @@ services:
       #- ENABLE_DASHBOARD=true
     volumes:
       # where backups are stored
-      - "your data directory:/var/lib/backup_3ds"
+      - "your data directory:/var/lib/backup_3ds/backups"
 ```
 
 ### Using Docker Run
@@ -50,7 +50,7 @@ Alternatively, you can run the container directly with Docker:
 docker run -d \
   --name backup_3ds \
   -e FTPD_3DS_ADDRESSES=192.168.1.XXX \
-  -v ./data:/var/lib/backup_3ds \
+  -v ./data:/var/lib/backup_3ds/backups \
   carnivuth/backup_3ds:latest
 ```
 
