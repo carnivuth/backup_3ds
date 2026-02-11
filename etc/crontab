@@ -9,4 +9,4 @@ PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 */10 * * * * root /usr/local/bin/backup_3ds.sh reset_cronjob > /proc/1/fd/1 2>&1
 
 # start lighttpd
-@reboot root lighttpd -D -f /etc/lighttpd/lighttpd.conf > /proc/1/fd/1 2>&1
+@reboot root [[ $ENABLE_DASHBOARD == 'true' ]] && lighttpd -D -f /etc/lighttpd/lighttpd.conf > /proc/1/fd/1 2>&1

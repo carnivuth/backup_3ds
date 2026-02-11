@@ -8,6 +8,7 @@ services:
       - FTPD_3DS_PORTS=21;21
       - FTPD_3DS_USERNAMES=ds;ds
       - FTPD_3DS_PASSWORDS=supersecretpassword;supersecretpassword
+      - ENABLE_DASHBOARD=true
       - BACKUP_DIRS=/home/ds
     ports:
       - 8080:80
