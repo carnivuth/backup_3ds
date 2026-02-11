@@ -106,7 +106,7 @@ function generate_dashboard(){
   source <( bash-tpl "$TEMPLATE_DIR/index.html.tpl" ) > "$WEB_ROOT/index.html"
 
   # generate backups pages for each console
-  for dir in $(find "$BACKUP_DEST"  -maxdepth 1 -not -name "$BACKUP_DEST" -type d); do
+  for dir in $(find "$BACKUP_DEST/"  -maxdepth 1 -not -path "$BACKUP_DEST/" -type d); do
     dir_name="$(basename "$dir")"
     log_inner info "generating backup page for $dir_name using data from $dir"
     source <( bash-tpl "$TEMPLATE_DIR/backup_list.html.tpl" ) > "$WEB_ROOT/$dir_name.html"

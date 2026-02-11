@@ -12,7 +12,7 @@
   <div class="container">
 
     <header>
-      <h1>Backup 3DS dashboard</h1>
+      <a href="/"><h1>Backup 3DS dashboard</h1></a>
     </header>
 
     <div class="count"><span></span>Backups of <% $dir_name %></div>

@@ -12,7 +12,7 @@
   <div class="container">
 
     <header>
-      <h1>Backup 3DS dashboard</h1>
+      <a href="/"><h1>Backup 3DS dashboard</h1></a>
     </header>
 
     <div class="count"><span><%% ls "$BACKUP_DEST" | wc -l  %></span> Consoles</div>
@@ -21,7 +21,7 @@
     <div class="list">
 
       %
-        for console in $(find "$BACKUP_DEST"  -maxdepth 1 -type d -not -name "$BACKUP_DEST" ); do
+        for console in $(find "$BACKUP_DEST/"  -maxdepth 1 -type d -not -path "$BACKUP_DEST/" ); do
           console_name="$(basename "$console")"
           echo "<a href='$console_name.html'>
                   <div class='item'>
