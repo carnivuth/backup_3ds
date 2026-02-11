@@ -23,13 +23,16 @@
       %
         for backup in $(find "$dir" -name '*.zip' ); do
           backup_name="$(basename "$backup")"
-          echo "<div class='item'>
-                  <div class='item-icon' style='background:rgba(200,255,94,0.12)'>💾</div>
-                  <div class='item-body'>
-                    <div class='item-name'>$backup_name</div>
-                    <div class='item-desc'>$(stat -c '%y' "$backup" )</div>
+          dir_name="$(basename "$(dirname "$backup")")"
+          echo "<a href='downloads/$dir_name/$backup_name'>
+                  <div class='item'>
+                    <div class='item-icon' style='background:rgba(200,255,94,0.12)'>💾</div>
+                    <div class='item-body'>
+                      <div class='item-name'>$backup_name</div>
+                      <div class='item-desc'>$(stat -c '%y' "$backup" )</div>
+                    </div>
                   </div>
-                </div>"
+                </a>"
         done
       %
 
