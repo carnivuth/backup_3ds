@@ -17,6 +17,12 @@ if [[ ! -d "$BASE_DIR" ]]; then mkdir -p "$BASE_DIR"; fi
 if [[ -z $BACKUP_DEST ]];then BACKUP_DEST="$BASE_DIR/backups"; fi
 if [[ ! -d "$BACKUP_DEST" ]]; then mkdir -p "$BACKUP_DEST"; fi
 
+if [[ -z $TEMPLATE_DIR ]];then TEMPLATE_DIR=/var/lib/backup_3ds/dashboard/templates; fi
+if [[ ! -d "$TEMPLATE_DIR" ]]; then mkdir -p "$TEMPLATE_DIR"; fi
+
+if [[ -z $WEB_ROOT ]];then WEB_ROOT=/var/lib/backup_3ds/dashboard/static; fi
+if [[ ! -d "$WEB_ROOT" ]]; then mkdir -p "$WEB_ROOT"; fi
+
 # stat dir to share information between cron instances of the script, this act as a folder for lock files
 if [[ -z $STAT_DIR ]];then STAT_DIR="/tmp/backup_3ds/status"; fi
 if [[ ! -d "$STAT_DIR" ]]; then mkdir -p "$STAT_DIR"; fi
@@ -60,18 +66,18 @@ function backup(){
   for dir in ${dirs_to_backup[@]}; do
 
     dirname="$(echo "${dir}" | sed 's/\//-/g' | sed 's/^-//g')"
-    mkdir "${host_dir}/${timestamp}_${dirname}"
-    log_inner info "creating backup ${host_dir}/${timestamp}_${dirname} of ${dir}"
+    mkdir "${host_dir}/${address}_${timestamp}_${dirname}"
+    log_inner info "creating backup ${host_dir}/${address}_${timestamp}_${dirname} of ${dir}"
 
     # check for error codes and print error otherwise
-    if ncftpget -R -v -u "$username" -p "$password" -P "${port}" "${address}" "${host_dir}/${timestamp}_${dirname}" "${dir}"; then
+    if ncftpget -R -v -u "$username" -p "$password" -P "${port}" "${address}" "${host_dir}/${address}_${timestamp}_${dirname}" "${dir}"; then
 
       # compress backup
-      ( cd ${host_dir} && zip -r "${timestamp}_${dirname}.zip"  "${timestamp}_${dirname}") || log_inner error "error archiving ${host_dir}/${timestamp}_${dirname}"
+      ( cd ${host_dir} && zip -r "${address}_${timestamp}_${dirname}.zip"  "${address}_${timestamp}_${dirname}") || log_inner error "error archiving ${host_dir}/${address}_${timestamp}_${dirname}"
 
       # removing downloaded files
-      rm -fr "${host_dir}/${timestamp}_${dirname}"
-      log_inner info "done backup of ${host_dir}/${timestamp}_${dirname} from ${address}"
+      rm -fr "${host_dir}/${address}_${timestamp}_${dirname}"
+      log_inner info "done backup of ${host_dir}/${address}_${timestamp}_${dirname} from ${address}"
 
     else
       log_inner error "error in downloading ${dir} from ${address}"
@@ -94,6 +100,20 @@ function reset(){
   echo 1 > "$stat_file"
 }
 
+function generate_dashboard(){
+
+  # generate index
+  source <( bash-tpl "$TEMPLATE_DIR/index.html.tpl" ) > "$WEB_ROOT/index.html"
+
+  # generate backups pages for each console
+  for dir in $(find "$BACKUP_DEST/"  -maxdepth 1 -not -path "$BACKUP_DEST/" -type d); do
+    dir_name="$(basename "$dir")"
+    log_inner info "generating backup page for $dir_name using data from $dir"
+    source <( bash-tpl "$TEMPLATE_DIR/backup_list.html.tpl" ) > "$WEB_ROOT/$dir_name.html"
+  done
+
+}
+
 # main function that loops the given hosts and runs the backup script
 function backup_cronjob(){
 
@@ -104,6 +124,7 @@ function backup_cronjob(){
   for index in "${!addresses[@]}"; do
     backup "${addresses[$index]}" "${ports[$index]}" "${usernames[$index]}" "${passwords[$index]}"
   done
+  generate_dashboard
 
 }
 
