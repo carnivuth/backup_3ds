@@ -8,6 +8,7 @@ Make backups of 3ds using ftpd periodically, all in docker container 🐳
 
 - **Automated Backups**: Uses cron to run a backup script
 - **FTP-Based Transfer**: data are copied from the 3DS via ftp exposed by [FTPD](https://github.com/mtheall/ftpd)
+- **Automated pruning of old backups**: data are pruned periodically based on [configuration parameters](#Configuration-parameters)
 - **Docker Containerized**: Easy deployment with Docker and Docker Compose
 - **Low Maintenance**: Set it and forget it - backups run automatically in the background
 - **Very ugly dashboard**: Static web interface to download backups
@@ -69,6 +70,7 @@ The following environment variables are used to configure the backup container:
 | `FTPD_3DS_PASSWORDS` | List of ftp password used to authenticate to the 3DS, one for each 3DS configured i `FTPD_3DS_ADDRESSES` | None | No |
 | `BACKUP_DIRS` | List of paths to backup from the 3ds separated by `;`, for example to backup [checkpoint](https://github.com/BernardoGiordano/Checkpoint/releases) data and saves from nds games saved in `saves` directory `/3ds/Checkpoint/saves;/roms/nds/saves` (assuming nds roms are saved under `/roms/nds`)  | `/` | No |
 | `ENABLE_DASHBOARD` | Enable dashboard (start lighttpd inside docker container), enable by setting to `ENABLE_DASHBOARD=true`  | None | No |
+| `KEEP_LAST` | Number of backups that the pruning job should keep, set it to `0` to disable pruning | `10` | No |
 
 
 ### Finding Your 3DS FTPD Information

@@ -8,5 +8,8 @@ PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 # reset backup status every 10 minutes, tweak this to change the backup frequency
 */10 * * * * root /usr/local/bin/backup_3ds.sh reset_cronjob > /proc/1/fd/1 2>&1
 
+# prune backups every 15 minutes, tweak this to change the pruning job frequency
+*/15 * * * * root /usr/local/bin/backup_3ds.sh prune_cronjob > /proc/1/fd/1 2>&1
+
 # start lighttpd
 @reboot root [[ $ENABLE_DASHBOARD == 'true' ]] && lighttpd -D -f /etc/lighttpd/lighttpd.conf > /proc/1/fd/1 2>&1
