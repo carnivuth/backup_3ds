@@ -10,6 +10,7 @@ services:
       - FTPD_3DS_PASSWORDS=supersecretpassword;supersecretpassword
       - ENABLE_DASHBOARD=true
       - BACKUP_DIRS=/home/ds
+      - KEEP_LAST=0
     ports:
       - 8080:80
     volumes:

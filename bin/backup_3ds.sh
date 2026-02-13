@@ -1,7 +1,7 @@
 #!/bin/bash
 
 log_inner() {
-        echo "[${BASH_SOURCE##*/}:${1^^}] ${FUNCNAME[2]}@${BASH_LINENO[1]}: ${*:2}"
+  echo "[${BASH_SOURCE##*/}:${1^^}] ${FUNCNAME[2]}@${BASH_LINENO[1]}: ${*:2}"
 }
 
 # check if 3ds address variable is set, exit otherwise
@@ -29,6 +29,10 @@ if [[ ! -d "$STAT_DIR" ]]; then mkdir -p "$STAT_DIR"; fi
 
 # parsing the 3DS directory to backup
 if [[ -z $BACKUP_DIRS ]];then BACKUP_DIRS="/"; fi
+
+if [[ -z $KEEP_LAST ]]; then KEEP_LAST=10; fi
+# Validate KEEP_LAST is a positive integer
+if ! [[ "$KEEP_LAST" =~ ^[0-9][0-9]*$ ]]; then log_inner error "KEEP_LAST must be a positive integer, but got $KEEP_LAST"; exit 1; fi
 
 # backup a single 3ds, parameters address port username password
 function backup(){
@@ -72,15 +76,15 @@ function backup(){
     # check for error codes and print error otherwise
     if ncftpget -R -v -u "$username" -p "$password" -P "${port}" "${address}" "${host_dir}/${address}_${timestamp}_${dirname}" "${dir}"; then
 
-      # compress backup
-      ( cd ${host_dir} && zip -r "${address}_${timestamp}_${dirname}.zip"  "${address}_${timestamp}_${dirname}") || log_inner error "error archiving ${host_dir}/${address}_${timestamp}_${dirname}"
+    # compress backup
+    ( cd ${host_dir} && zip -r "${address}_${timestamp}_${dirname}.zip"  "${address}_${timestamp}_${dirname}") || log_inner error "error archiving ${host_dir}/${address}_${timestamp}_${dirname}"
 
-      # removing downloaded files
-      rm -fr "${host_dir}/${address}_${timestamp}_${dirname}"
-      log_inner info "done backup of ${host_dir}/${address}_${timestamp}_${dirname} from ${address}"
+    # removing downloaded files
+    rm -fr "${host_dir}/${address}_${timestamp}_${dirname}"
+    log_inner info "done backup of ${host_dir}/${address}_${timestamp}_${dirname} from ${address}"
 
-    else
-      log_inner error "error in downloading ${dir} from ${address}"
+  else
+    log_inner error "error in downloading ${dir} from ${address}"
     fi
 
   done
@@ -137,6 +141,50 @@ function reset_cronjob(){
 
 }
 
+prune() {
+
+  if [[ -z $1 ]];then log_inner error "pass 3ds address as parameter"; return 1; else address="$1"; fi
+
+  # avoid pruning backups if KEEP_LAST variable is 0
+  if [[ $KEEP_LAST == "0" ]];then log_inner info " KEEP_LAST set to 0, avoid pruning "; return 0; fi
+
+  log_inner info "Running pruning job for $address, keeping the last $KEEP_LAST."
+
+  # Find all immediate subdirectories within BACKUP_DEST,
+  # sort them by modification time (oldest first).
+  # Then calculate how many to delete to keep only the KEEP_LAST newest.
+  backups_list=$(find "$BACKUP_DEST/$address" -name '*.zip' -printf '%T@ %p\n' | sort -n)
+  total_backups=$(echo "$backups_list" | wc -l)
+
+  # Calculate how many backups to prune
+  num_to_prune=$(( total_backups - KEEP_LAST ))
+
+  if [ "$num_to_prune" -gt 0 ]; then
+    log_inner info "Identified $total_backups backups in total, keeping $KEEP_LAST. Pruning $num_to_prune oldest backups."
+    echo "$backups_list" | \
+      head -n "$num_to_prune" | \
+      cut -d' ' -f2- | \
+      xargs -r rm -rf
+
+    if [ $? -eq 0 ]; then
+      log_inner info "Pruning process completed successfully."
+    else
+      log_inner error "Pruning process encountered an error while removing files."
+      return 1
+    fi
+  else
+    log_inner info "No backups to prune. Total backups: $total_backups, desired to keep: $KEEP_LAST."
+  fi
+}
+
+function prune_cronjob(){
+
+  IFS=';' read -ra addresses <<< "$FTPD_3DS_ADDRESSES"
+  for index in "${!addresses[@]}"; do
+    prune "${addresses[$index]}"
+  done
+
+}
 
 case "$1" in
   "backup_cronjob")
@@ -145,7 +193,10 @@ case "$1" in
   "reset_cronjob")
     reset_cronjob
     ;;
+  "prune_cronjob")
+    prune_cronjob
+    ;;
   *)
-    log_inner error "usage: $0 backup_cronjob/reset_cronjob"
+    log_inner error "usage: $0 backup_cronjob/reset_cronjob/prune_cronjob"
     ;;
 esac
