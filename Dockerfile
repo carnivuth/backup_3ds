@@ -23,5 +23,7 @@ RUN mkdir -p /var/lib/backup_3ds/dashboard/static
 COPY dashboard/templates/* /var/lib/backup_3ds/dashboard/templates/
 COPY dashboard/static/* /var/lib/backup_3ds/dashboard/static/
 
+EXPOSE 80
+
 WORKDIR /usr/local/bin
 CMD [ "./entrypoint.sh" ]
