@@ -74,7 +74,7 @@ function backup(){
     log_inner info "creating backup ${host_dir}/${address}_${timestamp}_${dirname} of ${dir}"
 
     # check for error codes and print error otherwise
-    if ncftpget -R -v -u "$username" -p "$password" -P "${port}" "${address}" "${host_dir}/${address}_${timestamp}_${dirname}" "${dir}"; then
+    if ncftpget -T -R -v -u "$username" -p "$password" -P "${port}" "${address}" "${host_dir}/${address}_${timestamp}_${dirname}" "${dir}"; then
 
     # compress backup
     ( cd ${host_dir} && zip -r "${address}_${timestamp}_${dirname}.zip"  "${address}_${timestamp}_${dirname}") || log_inner error "error archiving ${host_dir}/${address}_${timestamp}_${dirname}"
