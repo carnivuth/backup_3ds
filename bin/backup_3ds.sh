@@ -1,46 +1,31 @@
 #!/bin/bash
+FTPD_3DS_PORTS=${FTPD_3DS_PORTS:-21}
+KEEP_LAST=${KEEP_LAST:-10}
+BASE_DIR=${BASE_DIR:-/var/lib/backup_3ds}
+BACKUP_DEST=${BACKUP_DEST:-$BASE_DIR/backups}
+TEMPLATE_DIR=${TEMPLATE_DIR:-/var/lib/backup_3ds/dashboard/templates}
+WEB_ROOT=${WEB_ROOT:-/var/lib/backup_3ds/dashboard/static}
+STAT_DIR=${STAT_DIR:-/tmp/backup_3ds/status}
+BACKUP_DIRS=${BACKUP_DIRS:-/}
+
+# check if 3ds address variable is set, exit otherwise
+if [[ -z $FTPD_3DS_ADDRESSES ]]; then log_inner error "Set server address trough FTPD_3DS_ADDRESSES env var"; exit 1; fi
+
+# Validate KEEP_LAST is a positive integer
+if ! [[ "$KEEP_LAST" =~ ^[0-9][0-9]*$ ]]; then log_inner error "KEEP_LAST must be a positive integer, but got $KEEP_LAST"; exit 1; fi
+
+mkdir -p "$BASE_DIR" "$BACKUP_DEST" "$TEMPLATE_DIR" "$WEB_ROOT" "$STAT_DIR"
 
 log_inner() {
   echo "[${BASH_SOURCE##*/}:${1^^}] ${FUNCNAME[2]}@${BASH_LINENO[1]}: ${*:2}"
 }
 
-# check if 3ds address variable is set, exit otherwise
-if [[ -z $FTPD_3DS_ADDRESSES ]]; then log_inner error "Set server address trough FTPD_3DS_ADDRESSES env var"; exit 1; fi
-
-# ports parsing, if no ports are setted in the env var fallback to 21 for all host
-if [[ -z $FTPD_3DS_PORTS ]]; then FTPD_3DS_PORTS='21'; fi
-
-# directories
-if [[ -z $BASE_DIR ]];then BASE_DIR=/var/lib/backup_3ds; fi
-if [[ ! -d "$BASE_DIR" ]]; then mkdir -p "$BASE_DIR"; fi
-
-if [[ -z $BACKUP_DEST ]];then BACKUP_DEST="$BASE_DIR/backups"; fi
-if [[ ! -d "$BACKUP_DEST" ]]; then mkdir -p "$BACKUP_DEST"; fi
-
-if [[ -z $TEMPLATE_DIR ]];then TEMPLATE_DIR=/var/lib/backup_3ds/dashboard/templates; fi
-if [[ ! -d "$TEMPLATE_DIR" ]]; then mkdir -p "$TEMPLATE_DIR"; fi
-
-if [[ -z $WEB_ROOT ]];then WEB_ROOT=/var/lib/backup_3ds/dashboard/static; fi
-if [[ ! -d "$WEB_ROOT" ]]; then mkdir -p "$WEB_ROOT"; fi
-
-# stat dir to share information between cron instances of the script, this act as a folder for lock files
-if [[ -z $STAT_DIR ]];then STAT_DIR="/tmp/backup_3ds/status"; fi
-if [[ ! -d "$STAT_DIR" ]]; then mkdir -p "$STAT_DIR"; fi
-
-# parsing the 3DS directory to backup
-if [[ -z $BACKUP_DIRS ]];then BACKUP_DIRS="/"; fi
-
-if [[ -z $KEEP_LAST ]]; then KEEP_LAST=10; fi
-# Validate KEEP_LAST is a positive integer
-if ! [[ "$KEEP_LAST" =~ ^[0-9][0-9]*$ ]]; then log_inner error "KEEP_LAST must be a positive integer, but got $KEEP_LAST"; exit 1; fi
-
 # backup a single 3ds, parameters address port username password
 function backup(){
 
   if [[ -z $1 ]];then log_inner error "pass address as parameter"; return 4; else address="$1"; fi
-  if [[ -z $2 ]];then port=21; else port="$2"; fi
-  username=$3
-  password=$4
+  port=${2-:21}
+  userpass="$(test -n $3 && [ "$3" != "" ] && test -n $4 && [ "$4" != "" ] && echo "-u $3,$4")"
 
   # set status file variable and initialize the file if it does not exist
   stat_file="${STAT_DIR}/${address}"
@@ -74,7 +59,8 @@ function backup(){
     log_inner info "creating backup ${host_dir}/${address}_${timestamp}_${dirname} of ${dir}"
 
     # check for error codes and print error otherwise
-    if ncftpget -T -R -v -u "$username" -p "$password" -P "${port}" "${address}" "${host_dir}/${address}_${timestamp}_${dirname}" "${dir}"; then
+    log_inner info lftp -e "mirror --verbose=3 ${dir} ${host_dir}/${address}_${timestamp}_${dirname}" -p "${port}" "${userpass}" "${address}"
+    if lftp -e "mirror --verbose=3 ${dir} ${host_dir}/${address}_${timestamp}_${dirname}" -p "${port}" "${userpass}" "${address}"; then
 
     # compress backup
     ( cd ${host_dir} && zip -r "${address}_${timestamp}_${dirname}.zip"  "${address}_${timestamp}_${dirname}") || log_inner error "error archiving ${host_dir}/${address}_${timestamp}_${dirname}"
@@ -113,6 +99,7 @@ function generate_dashboard(){
   for dir in $(find "$BACKUP_DEST/"  -maxdepth 1 -not -path "$BACKUP_DEST/" -type d); do
     dir_name="$(basename "$dir")"
     log_inner info "generating backup page for $dir_name using data from $dir"
+    log_inner info "source <( bash-tpl "$TEMPLATE_DIR/backup_list.html.tpl" ) > $WEB_ROOT/$dir_name.html"
     source <( bash-tpl "$TEMPLATE_DIR/backup_list.html.tpl" ) > "$WEB_ROOT/$dir_name.html"
   done
 
@@ -126,6 +113,7 @@ function backup_cronjob(){
   IFS=';' read -ra usernames <<< "$FTPD_3DS_USERNAMES"
   IFS=';' read -ra passwords <<< "$FTPD_3DS_PASSWORDS"
   for index in "${!addresses[@]}"; do
+    log_inner info backup "${addresses[$index]}" "${ports[$index]}" "${usernames[$index]}" "${passwords[$index]}"
     backup "${addresses[$index]}" "${ports[$index]}" "${usernames[$index]}" "${passwords[$index]}"
   done
   generate_dashboard

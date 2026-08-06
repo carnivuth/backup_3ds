@@ -4,12 +4,10 @@ services:
     container_name: backup_3ds
     build: ./
     environment:
-      - FTPD_3DS_ADDRESSES=backup_3ds_ftp_server_1;backup_3ds_ftp_server_2
-      - FTPD_3DS_PORTS=21;21
-      - FTPD_3DS_USERNAMES=ds;ds
-      - FTPD_3DS_PASSWORDS=supersecretpassword;supersecretpassword
+      - FTPD_3DS_ADDRESSES=192.168.1.97
+      - FTPD_3DS_PORTS=21
       - ENABLE_DASHBOARD=true
-      - BACKUP_DIRS=/home/ds
+      - BACKUP_DIRS=/PSP/SAVEDATA
       - KEEP_LAST=0
     ports:
       - 8080:80

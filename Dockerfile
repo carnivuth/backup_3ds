@@ -3,7 +3,7 @@ FROM debian:13.3-slim
 RUN apt update
 
 # install cron and crontab
-RUN apt install -y cron ncftp netcat-traditional zip lighttpd
+RUN apt install -y cron lftp netcat-traditional zip lighttpd
 
 # setup crontab
 COPY ./etc/crontab /etc/
