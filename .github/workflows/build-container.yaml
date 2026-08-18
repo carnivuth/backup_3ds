@@ -3,7 +3,7 @@ run-name: ${{ github.actor }} is creating the new docker release of backup_3ds
 on:
   push:
     tags:
-      - 'v*'
+      - '*'
 jobs:
   build_and_push_container:
     runs-on: ubuntu-latest
