@@ -1,15 +1,14 @@
 #!/bin/bash
-FTPD_3DS_PORTS=${FTPD_3DS_PORTS:-21}
 KEEP_LAST=${KEEP_LAST:-10}
 BASE_DIR=${BASE_DIR:-/var/lib/backup_3ds}
 BACKUP_DEST=${BACKUP_DEST:-$BASE_DIR/backups}
 TEMPLATE_DIR=${TEMPLATE_DIR:-/var/lib/backup_3ds/dashboard/templates}
 WEB_ROOT=${WEB_ROOT:-/var/lib/backup_3ds/dashboard/static}
+CONFIG_FILE=${CONFIG_FILE:-/etc/backup_3ds/config.yml}
 STAT_DIR=${STAT_DIR:-/tmp/backup_3ds/status}
-BACKUP_DIRS=${BACKUP_DIRS:-/}
 
-# check if 3ds address variable is set, exit otherwise
-if [[ -z $FTPD_3DS_ADDRESSES ]]; then log_inner error "Set server address trough FTPD_3DS_ADDRESSES env var"; exit 1; fi
+# Check if the config file exists
+test -f "$CONFIG_FILE" || { echo "Config file $CONFIG_FILE does not exist. Please create it."; exit 1; }
 
 # Validate KEEP_LAST is a positive integer
 if ! [[ "$KEEP_LAST" =~ ^[0-9][0-9]*$ ]]; then log_inner error "KEEP_LAST must be a positive integer, but got $KEEP_LAST"; exit 1; fi
@@ -23,54 +22,56 @@ log_inner() {
 # backup a single 3ds, parameters address port username password
 function backup(){
 
-  if [[ -z $1 ]];then log_inner error "pass address as parameter"; return 4; else address="$1"; fi
-  port=${2-:21}
-  userpass="$(test -n $3 && [ "$3" != "" ] && test -n $4 && [ "$4" != "" ] && echo "-u $3,$4")"
+
+  if [[ -z $1 ]] || [[ "$1" == "null" ]];then log_inner error "set console name"; return 4; else name="$1"; fi
+  if [[ -z $2 ]] || [[ "$2" == "null" ]];then log_inner error "set backend name options are lftp or ncftpget"; return 4; else backend="$2"; fi
+  if [[ -n $3 ]] && [[ "$3" != "null" ]];then port="$3"; else port=21; fi
+  if [[ -n $4 ]] && [[ "$4" != "null" ]];then user="$4"; fi
+  if [[ -n $5 ]] && [[ "$5" != "null" ]];then password="$5"; fi
 
   # set status file variable and initialize the file if it does not exist
-  stat_file="${STAT_DIR}/${address}"
+  stat_file="${STAT_DIR}/${name}"
+
   if [[ ! -f "$stat_file" ]]; then echo 1 > "$stat_file"; fi
 
   # setting backup dir for the specific 3ds
-  host_dir="${BACKUP_DEST}/${address}"
-  if [[ ! -d "$host_dir" ]]; then mkdir -p "$host_dir"; fi
+  host_dir="${BACKUP_DEST}/${name}"; mkdir -p "$host_dir"
 
-  # check if 3ds backup is running
-  if [[ $(cat "$stat_file") == "2" ]]; then log_inner info "backup of ${address} is running since $(stat -c '%y' "$stat_file")"; return 2; fi
+  # check if 3ds backup is running, exit if yes
+  if [[ $(cat "$stat_file") == "2" ]]; then log_inner info "backup of ${name} is running since $(stat -c '%y' "$stat_file")"; return 2; fi
 
-  # check if 3ds backup has been made
-  if [[ $(cat "$stat_file") == "0" ]]; then log_inner info "backup of ${address} has already been made at $(stat -c '%y' "$stat_file")"; return 1; fi
+  # check if 3ds backup has been made, exit if yes
+  if [[ $(cat "$stat_file") == "0" ]]; then log_inner info "backup of ${name} has already been made at $(stat -c '%y' "$stat_file")"; return 1; fi
 
-  # check if 3ds ftp server is up
-  if ! nc -z -w1 "$address" "$port"; then log_inner info "3ds at ${address}:${port} is not listening for ftp connections"; return 3; fi
+  # check if 3ds ftp server is up, exit if not
+  if ! nc -z -w1 "$name" "$port"; then log_inner info "3ds at ${name}:${port} is not listening for ftp connections"; return 3; fi
 
   # setting lock file to avoid running multiple backup jobs in parallel on the same 3DS
   echo 2 > "$stat_file"
-  log_inner info "starting 3DS backup of $address:$port"
+  log_inner info "starting console backup of $name:$port"
 
   timestamp="$(date +%s)"
 
   # loop all dirs to backup
-  IFS=';' read -ra dirs_to_backup <<< "$BACKUP_DIRS"
-  for dir in ${dirs_to_backup[@]}; do
+  yq ".consoles[] | select(.name == \"$name\").dirs | join(\"\n\")" "${CONFIG_FILE}" -r | while read dir; do
 
     dirname="$(echo "${dir}" | sed 's/\//-/g' | sed 's/^-//g')"
-    mkdir "${host_dir}/${address}_${timestamp}_${dirname}"
-    log_inner info "creating backup ${host_dir}/${address}_${timestamp}_${dirname} of ${dir}"
+    mkdir "${host_dir}/${name}_${timestamp}_${dirname}"
+    log_inner info "creating backup ${host_dir}/${name}_${timestamp}_${dirname} of ${dir}"
 
     # check for error codes and print error otherwise
-    log_inner info lftp -e "mirror --verbose=3 ${dir} ${host_dir}/${address}_${timestamp}_${dirname}" -p "${port}" "${userpass}" "${address}"
-    if lftp -e "mirror --verbose=3 ${dir} ${host_dir}/${address}_${timestamp}_${dirname}" -p "${port}" "${userpass}" "${address}"; then
+    log_inner info lftp -e "mirror --verbose=3 ${dir} ${host_dir}/${name}_${timestamp}_${dirname}" -p "${port}" "${userpass}" "${name}"
+    if lftp -e "mirror --verbose=3 ${dir} ${host_dir}/${name}_${timestamp}_${dirname}" -p "${port}" "${userpass}" "${name}"; then
 
     # compress backup
-    ( cd ${host_dir} && zip -r "${address}_${timestamp}_${dirname}.zip"  "${address}_${timestamp}_${dirname}") || log_inner error "error archiving ${host_dir}/${address}_${timestamp}_${dirname}"
+    ( cd ${host_dir} && zip -r "${name}_${timestamp}_${dirname}.zip"  "${name}_${timestamp}_${dirname}") || log_inner error "error archiving ${host_dir}/${name}_${timestamp}_${dirname}"
 
     # removing downloaded files
-    rm -fr "${host_dir}/${address}_${timestamp}_${dirname}"
-    log_inner info "done backup of ${host_dir}/${address}_${timestamp}_${dirname} from ${address}"
+    rm -fr "${host_dir}/${name}_${timestamp}_${dirname}"
+    log_inner info "done backup of ${host_dir}/${name}_${timestamp}_${dirname} from ${name}"
 
   else
-    log_inner error "error in downloading ${dir} from ${address}"
+    log_inner error "error in downloading ${dir} from ${name}"
     fi
 
   done
@@ -108,13 +109,9 @@ function generate_dashboard(){
 # main function that loops the given hosts and runs the backup script
 function backup_cronjob(){
 
-  IFS=';' read -ra addresses <<< "$FTPD_3DS_ADDRESSES"
-  IFS=';' read -ra ports <<< "$FTPD_3DS_PORTS"
-  IFS=';' read -ra usernames <<< "$FTPD_3DS_USERNAMES"
-  IFS=';' read -ra passwords <<< "$FTPD_3DS_PASSWORDS"
-  for index in "${!addresses[@]}"; do
-    log_inner info backup "${addresses[$index]}" "${ports[$index]}" "${usernames[$index]}" "${passwords[$index]}"
-    backup "${addresses[$index]}" "${ports[$index]}" "${usernames[$index]}" "${passwords[$index]}"
+  yq '.consoles[] | "\(.name) \(.backend) \(.port) \(.user) \(.password)"' "${CONFIG_FILE}" -r | while read name backend port user password; do
+    log_inner info "Parsed console from config: $name $backend $port $user $password"
+    backup "$name" "$backend" "$port" "$user" "$password"
   done
   generate_dashboard
 
