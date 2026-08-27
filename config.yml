@@ -1,0 +1,24 @@
+---
+consoles:
+  - name: zorua.local.carnivuth.org
+    port: 21
+    backend: lftp
+    dirs:
+      - PSP/SAVEDATA
+  - name: zoroark.local.carnivuth.org
+    port: 1337
+    backend: lftp
+    dirs:
+      - ux0:/pspemu/PSP/SAVEDATA
+  - name: riolu.local.carnivuth.org
+    port: 5000
+    backend: ncftpget
+    dirs:
+      - /3ds/Checkpoint/saves
+      - /roms/nds/saves
+  - name: cubchoo.local.carnivuth.org
+    port: 5000
+    backend: ncftpget
+    dirs:
+      - /3ds/Checkpoint/saves
+      - /roms/nds/saves
