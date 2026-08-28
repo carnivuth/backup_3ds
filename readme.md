@@ -1,6 +1,6 @@
 # Backup 3DS
 
-Make backups of 3ds using ftpd periodically, all in docker container 🐳
+Make backups of 3ds and psvita using ftpd periodically, all in docker container 🐳
 
 ![](./demo/demo.gif)
 
@@ -17,10 +17,10 @@ Make backups of 3ds using ftpd periodically, all in docker container 🐳
 
 Before using this backup solution, ensure you have:
 
-- A Nintendo 3DS with [FTPD](https://github.com/mtheall/ftpd) installed and running
+- A Nintendo 3DS with [FTPD](https://github.com/mtheall/ftpd) installed and running/a psvita with vitashell
 - Docker and Docker Compose installed on your system
-- Your 3DS and backup server on the same local network
-- The IP address and port of your 3DS FTPD server
+- Your 3DS/psvita and backup server on the same local network
+- The IP address and port of your 3DS FTPD/psvita vitashell server
 
 ## Installation
 
@@ -35,12 +35,31 @@ services:
     container_name: backup_3ds
     image: carnivuth/backup_3ds:latest
     environment:
-      - FTPD_3DS_ADDRESSES=insert your 3DS ip addresses separated by ;
       # to enable dashboard add this
       #- ENABLE_DASHBOARD=true
     volumes:
       # where backups are stored
       - "your data directory:/var/lib/backup_3ds/backups"
+      - "your configuration file :/etc/backup_3ds/config.yml:ro"
+```
+
+- configuration file sample:
+
+```yaml
+---
+consoles:
+  - name: my.psvita.local
+    port: 1337 # defaults to 21
+    # optionally set user and password
+    # user: user
+    # password: password
+    dirs:
+      - ux0:/pspemu/PSP/SAVEDATA
+  - name: my.3ds.local
+    port: 5000
+    dirs:
+      - /3ds/Checkpoint/saves
+      - /roms/nds/saves
 ```
 
 ### Using Docker Run
@@ -50,28 +69,10 @@ Alternatively, you can run the container directly with Docker:
 ```bash
 docker run -d \
   --name backup_3ds \
-  -e FTPD_3DS_ADDRESSES=192.168.1.XXX \
   -v ./data:/var/lib/backup_3ds/backups \
+  -v ./config.yml:/etc/backup_3ds/config.ymlc\
   carnivuth/backup_3ds:latest
 ```
-
-## Configuration
-
-### Environment Variables
-
-The following environment variables are used to configure the backup container:
-
-
-| Variable | Description | Default Value | Required |
-|----------|-------------|---------------|----------|
-| `FTPD_3DS_ADDRESSES` | List of the IP addresses of your Nintendo 3DS running FTPD separated by `;` | None | Yes |
-| `FTPD_3DS_PORT` | List of ports that FTPD is listening on, one for each 3DS configured i `FTPD_3DS_ADDRESSES` | `21` | No |
-| `FTPD_3DS_USERNAMES` | List of ftp usernames used to authenticate to the 3DS, one for each 3DS configured i `FTPD_3DS_ADDRESSES` | None | No |
-| `FTPD_3DS_PASSWORDS` | List of ftp password used to authenticate to the 3DS, one for each 3DS configured i `FTPD_3DS_ADDRESSES` | None | No |
-| `BACKUP_DIRS` | List of paths to backup from the 3ds separated by `;`, for example to backup [checkpoint](https://github.com/BernardoGiordano/Checkpoint/releases) data and saves from nds games saved in `saves` directory `/3ds/Checkpoint/saves;/roms/nds/saves` (assuming nds roms are saved under `/roms/nds`)  | `/` | No |
-| `ENABLE_DASHBOARD` | Enable dashboard (start lighttpd inside docker container), enable by setting to `ENABLE_DASHBOARD=true`  | None | No |
-| `KEEP_LAST` | Number of backups that the pruning job should keep, set it to `0` to disable pruning | `10` | No |
-
 
 ### Finding Your 3DS FTPD Information
 
