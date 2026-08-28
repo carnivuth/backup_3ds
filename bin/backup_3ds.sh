@@ -26,6 +26,8 @@ function backup(){
   if [[ -n $3 ]] && [[ "$3" != "null" ]];then user="$3"; fi
   if [[ -n $4 ]] && [[ "$4" != "null" ]];then password="$4"; fi
 
+  if [[ -n $user ]] && [[ -n $password ]]; then userpass="-u ${user},${password}"; else userpass=""; fi
+
   # set status file variable and initialize the file if it does not exist
   stat_file="${STAT_DIR}/${name}"
 
