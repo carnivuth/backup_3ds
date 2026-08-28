@@ -2,7 +2,7 @@ FROM debian:13.3-slim
 
 ENV SHELL=/bin/bash
 
-RUN apt update
+RUN apt-get update
 
 # install dependencies
 RUN apt-get install -y cron lftp netcat-traditional zip lighttpd curl

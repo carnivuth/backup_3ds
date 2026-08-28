@@ -22,10 +22,9 @@ function backup(){
 
 
   if [[ -z $1 ]] || [[ "$1" == "null" ]];then log_inner error "set console name"; return 4; else name="$1"; fi
-  if [[ -z $2 ]] || [[ "$2" == "null" ]];then log_inner error "set backend name options are lftp or ncftpget"; return 4; else backend="$2"; fi
-  if [[ -n $3 ]] && [[ "$3" != "null" ]];then port="$3"; else port=21; fi
-  if [[ -n $4 ]] && [[ "$4" != "null" ]];then user="$4"; fi
-  if [[ -n $5 ]] && [[ "$5" != "null" ]];then password="$5"; fi
+  if [[ -n $2 ]] && [[ "$2" != "null" ]];then port="$2"; else port=21; fi
+  if [[ -n $3 ]] && [[ "$3" != "null" ]];then user="$3"; fi
+  if [[ -n $4 ]] && [[ "$4" != "null" ]];then password="$4"; fi
 
   # set status file variable and initialize the file if it does not exist
   stat_file="${STAT_DIR}/${name}"
@@ -35,13 +34,6 @@ function backup(){
   # setting backup dir for the specific 3ds
   host_dir="${BACKUP_DEST}/${name}"; mkdir -p "$host_dir"
 
-  ftp_backend=$(yq ".consoles[] | select(.name == \"$name\").backend" "${CONFIG_FILE}")
-
-  if [[ "$ftp_backend" != "lftp" ]] && [[ "$ftp_backend" != "ncftpget" ]]; then
-    log_inner error "unsupported backend $ftp_backend for console $name"
-    return 5
-  fi
-
   # check if 3ds backup is running, exit if yes
   if [[ $(cat "$stat_file") == "2" ]]; then log_inner info "backup of ${name} is running since $(stat -c '%y' "$stat_file")"; return 2; fi
 
@@ -49,7 +41,7 @@ function backup(){
   if [[ $(cat "$stat_file") == "0" ]]; then log_inner info "backup of ${name} has already been made at $(stat -c '%y' "$stat_file")"; return 1; fi
 
   # check if 3ds ftp server is up, exit if not
-  if ! nc -z -w1 "$name" "$port"; then log_inner info "3ds at ${name}:${port} is not listening for ftp connections"; return 3; fi
+  if ! nc -z -w1 "$name" "$port"; then log_inner info "console at ${name}:${port} is not listening for ftp connections"; return 3; fi
 
   # setting lock file to avoid running multiple backup jobs in parallel on the same 3DS
   echo 2 > "$stat_file"
@@ -67,7 +59,7 @@ function backup(){
     # check for error codes and print error otherwise
 
     log_inner info lftp -e "mirror --verbose=3 ${dir} ${host_dir}/${name}_${timestamp}_${dirname}" -p "${port}" "${userpass}" "${name}"
-    if lftp -e "mirror --verbose=3 ${dir} ${host_dir}/${name}_${timestamp}_${dirname}" -p "${port}" "${userpass}" "${name}"; then
+    lftp -e "mirror --verbose=3 ${dir} ${host_dir}/${name}_${timestamp}_${dirname}" -p "${port}" "${userpass}" "${name}"
 
     # compress backup
     ( cd ${host_dir} && zip -r "${name}_${timestamp}_${dirname}.zip"  "${name}_${timestamp}_${dirname}") || log_inner error "error archiving ${host_dir}/${name}_${timestamp}_${dirname}"
@@ -75,10 +67,6 @@ function backup(){
     # removing downloaded files
     rm -fr "${host_dir}/${name}_${timestamp}_${dirname}"
     log_inner info "done backup of ${host_dir}/${name}_${timestamp}_${dirname} from ${name}"
-
-  else
-    log_inner error "error in downloading ${dir} from ${name}"
-    fi
 
   done
 
@@ -161,11 +149,10 @@ if [[ -z $keep_last ]] || [[ "$keep_last" == "null" ]]; then log_inner info "KEE
 function backup_cronjob(){
 
   log_inner info "Starting backup cronjob for all consoles defined in $CONFIG_FILE"
-  yq '.consoles[] | "\(.name) \(.backend) \(.port) \(.user) \(.password)"' "${CONFIG_FILE}" -r | while read name backend port user password; do
-    log_inner info "Parsed console from config: $name $backend $port $user $password"
-    backup "$name" "$backend" "$port" "$user" "$password"
+  yq '.consoles[] | "\(.name) \(.port) \(.user) \(.password)"' "${CONFIG_FILE}" -r | while read name port user password; do
+    log_inner info "Parsed console from config: $name $port $user $password"
+    backup "$name" "$port" "$user" "$password" && generate_dashboard
   done
-  generate_dashboard
 
 }
 
