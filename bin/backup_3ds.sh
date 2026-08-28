@@ -10,8 +10,6 @@ STAT_DIR=${STAT_DIR:-/tmp/backup_3ds/status}
 # Check if the config file exists
 test -f "$CONFIG_FILE" || { echo "Config file $CONFIG_FILE does not exist. Please create it."; exit 1; }
 
-# Validate KEEP_LAST is a positive integer
-if ! [[ "$KEEP_LAST" =~ ^[0-9][0-9]*$ ]]; then log_inner error "KEEP_LAST must be a positive integer, but got $KEEP_LAST"; exit 1; fi
 
 mkdir -p "$BASE_DIR" "$BACKUP_DEST" "$TEMPLATE_DIR" "$WEB_ROOT" "$STAT_DIR"
 
@@ -37,6 +35,13 @@ function backup(){
   # setting backup dir for the specific 3ds
   host_dir="${BACKUP_DEST}/${name}"; mkdir -p "$host_dir"
 
+  ftp_backend=$(yq ".consoles[] | select(.name == \"$name\").backend" "${CONFIG_FILE}")
+
+  if [[ "$ftp_backend" != "lftp" ]] && [[ "$ftp_backend" != "ncftpget" ]]; then
+    log_inner error "unsupported backend $ftp_backend for console $name"
+    return 5
+  fi
+
   # check if 3ds backup is running, exit if yes
   if [[ $(cat "$stat_file") == "2" ]]; then log_inner info "backup of ${name} is running since $(stat -c '%y' "$stat_file")"; return 2; fi
 
@@ -60,6 +65,7 @@ function backup(){
     log_inner info "creating backup ${host_dir}/${name}_${timestamp}_${dirname} of ${dir}"
 
     # check for error codes and print error otherwise
+
     log_inner info lftp -e "mirror --verbose=3 ${dir} ${host_dir}/${name}_${timestamp}_${dirname}" -p "${port}" "${userpass}" "${name}"
     if lftp -e "mirror --verbose=3 ${dir} ${host_dir}/${name}_${timestamp}_${dirname}" -p "${port}" "${userpass}" "${name}"; then
 
@@ -82,9 +88,9 @@ function backup(){
 
 function reset(){
 
-  if [[ -z $1 ]];then log_inner error "pass 3ds address as parameter"; return 1; else address="$1"; fi
+  if [[ -z $1 ]] || [[ "$1" == "null" ]];then log_inner error "set console name"; return 4; else name="$1"; fi
 
-  stat_file="${STAT_DIR}/${address}"
+  stat_file="${STAT_DIR}/${name}"
   # check if 3ds backup is running
   if [[ $(cat "$stat_file") == "2" ]]; then log_inner info "backup for $address is running since $(stat -c '%y' "$STAT_FILE"), avoid resetting"; return 0; fi
 
@@ -106,46 +112,35 @@ function generate_dashboard(){
 
 }
 
-# main function that loops the given hosts and runs the backup script
-function backup_cronjob(){
-
-  yq '.consoles[] | "\(.name) \(.backend) \(.port) \(.user) \(.password)"' "${CONFIG_FILE}" -r | while read name backend port user password; do
-    log_inner info "Parsed console from config: $name $backend $port $user $password"
-    backup "$name" "$backend" "$port" "$user" "$password"
-  done
-  generate_dashboard
-
-}
-
-function reset_cronjob(){
-
-  IFS=';' read -ra addresses <<< "$FTPD_3DS_ADDRESSES"
-  for index in "${!addresses[@]}"; do
-    reset "${addresses[$index]}"
-  done
-
-}
 
 prune() {
 
-  if [[ -z $1 ]];then log_inner error "pass 3ds address as parameter"; return 1; else address="$1"; fi
+  # test if the console name is provided
+  if [[ -z $1 ]] || [[ "$1" == "null" ]];then log_inner error "set console name"; return 4; else name="$1"; fi
+
+  # get keep_last value from config file for the specific console, if not set use default KEEP_LAST
+  keep_last=$(yq ".consoles[] | select(.name == \"$name\").keep_last" "${CONFIG_FILE}")
+if [[ -z $keep_last ]] || [[ "$keep_last" == "null" ]]; then log_inner info "KEEP_LAST not set for $name, using default value of $KEEP_LAST"; keep_last=$KEEP_LAST; fi
+
+  # Validate KEEP_LAST is a positive integer
+  if ! [[ "$keep_last" =~ ^[0-9][0-9]*$ ]]; then log_inner error "KEEP_LAST must be a positive integer, but got $keep_last"; exit 1; fi
 
   # avoid pruning backups if KEEP_LAST variable is 0
-  if [[ $KEEP_LAST == "0" ]];then log_inner info " KEEP_LAST set to 0, avoid pruning "; return 0; fi
+  if [[ $keep_last == "0" ]];then log_inner info " KEEP_LAST set to 0, avoid pruning "; return 0; fi
 
-  log_inner info "Running pruning job for $address, keeping the last $KEEP_LAST."
+  log_inner info "Running pruning job for $name, keeping the last $KEEP_LAST."
 
   # Find all immediate subdirectories within BACKUP_DEST,
   # sort them by modification time (oldest first).
   # Then calculate how many to delete to keep only the KEEP_LAST newest.
-  backups_list=$(find "$BACKUP_DEST/$address" -name '*.zip' -printf '%T@ %p\n' | sort -n)
+  backups_list=$(find "$BACKUP_DEST/$name" -name '*.zip' -printf '%T@ %p\n' | sort -n)
   total_backups=$(echo "$backups_list" | wc -l)
 
   # Calculate how many backups to prune
-  num_to_prune=$(( total_backups - KEEP_LAST ))
+  num_to_prune=$(( total_backups - keep_last ))
 
   if [ "$num_to_prune" -gt 0 ]; then
-    log_inner info "Identified $total_backups backups in total, keeping $KEEP_LAST. Pruning $num_to_prune oldest backups."
+    log_inner info "Identified $total_backups backups in total, keeping $keep_last. Pruning $num_to_prune oldest backups."
     echo "$backups_list" | \
       head -n "$num_to_prune" | \
       cut -d' ' -f2- | \
@@ -158,15 +153,35 @@ prune() {
       return 1
     fi
   else
-    log_inner info "No backups to prune. Total backups: $total_backups, desired to keep: $KEEP_LAST."
+    log_inner info "No backups to prune. Total backups: $total_backups, desired to keep: $keep_last."
   fi
+}
+
+# main function that loops the given hosts and runs the backup script
+function backup_cronjob(){
+
+  log_inner info "Starting backup cronjob for all consoles defined in $CONFIG_FILE"
+  yq '.consoles[] | "\(.name) \(.backend) \(.port) \(.user) \(.password)"' "${CONFIG_FILE}" -r | while read name backend port user password; do
+    log_inner info "Parsed console from config: $name $backend $port $user $password"
+    backup "$name" "$backend" "$port" "$user" "$password"
+  done
+  generate_dashboard
+
+}
+
+function reset_cronjob(){
+
+  yq '.consoles[] | "\(.name)"' "${CONFIG_FILE}" -r | while read name; do
+    reset "${name}"
+  done
+
 }
 
 function prune_cronjob(){
 
-  IFS=';' read -ra addresses <<< "$FTPD_3DS_ADDRESSES"
-  for index in "${!addresses[@]}"; do
-    prune "${addresses[$index]}"
+  log_inner info "Starting prune cronjob for all consoles defined in $CONFIG_FILE"
+  yq '.consoles[] | "\(.name)"' "${CONFIG_FILE}" -r | while read name; do
+    prune "${name}"
   done
 
 }
