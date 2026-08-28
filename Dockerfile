@@ -1,9 +1,14 @@
 FROM debian:13.3-slim
 
-RUN apt update
+ENV SHELL=/bin/bash
 
-# install cron and crontab
-RUN apt install -y cron ncftp netcat-traditional zip lighttpd
+RUN apt-get update
+
+# install dependencies
+RUN apt-get install -y cron lftp netcat-traditional zip lighttpd curl
+RUN curl -Ls https://github.com/mikefarah/yq/releases/download/v4.53.6/yq_linux_amd64 -o /usr/bin/yq
+RUN chmod +x /usr/bin/yq
+RUN apt purge -y curl
 
 # setup crontab
 COPY ./etc/crontab /etc/

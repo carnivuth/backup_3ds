@@ -4,17 +4,12 @@ services:
     container_name: backup_3ds
     build: ./
     environment:
-      - FTPD_3DS_ADDRESSES=backup_3ds_ftp_server_1;backup_3ds_ftp_server_2
-      - FTPD_3DS_PORTS=21;21
-      - FTPD_3DS_USERNAMES=ds;ds
-      - FTPD_3DS_PASSWORDS=supersecretpassword;supersecretpassword
       - ENABLE_DASHBOARD=true
-      - BACKUP_DIRS=/home/ds
-      - KEEP_LAST=0
     ports:
       - 8080:80
     volumes:
       - "/tmp/backup_3ds:/var/lib/backup_3ds/backups"
+      - "./config.yml:/etc/backup_3ds/config.yml:ro"
     depends_on:
       backup_3ds_ftp_server_1:
         condition: service_started

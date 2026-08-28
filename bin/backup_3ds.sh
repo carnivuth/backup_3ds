@@ -1,91 +1,74 @@
 #!/bin/bash
+KEEP_LAST=${KEEP_LAST:-10}
+BASE_DIR=${BASE_DIR:-/var/lib/backup_3ds}
+BACKUP_DEST=${BACKUP_DEST:-$BASE_DIR/backups}
+TEMPLATE_DIR=${TEMPLATE_DIR:-/var/lib/backup_3ds/dashboard/templates}
+WEB_ROOT=${WEB_ROOT:-/var/lib/backup_3ds/dashboard/static}
+CONFIG_FILE=${CONFIG_FILE:-/etc/backup_3ds/config.yml}
+STAT_DIR=${STAT_DIR:-/tmp/backup_3ds/status}
+
+# Check if the config file exists
+test -f "$CONFIG_FILE" || { echo "Config file $CONFIG_FILE does not exist. Please create it."; exit 1; }
+
+
+mkdir -p "$BASE_DIR" "$BACKUP_DEST" "$TEMPLATE_DIR" "$WEB_ROOT" "$STAT_DIR"
 
 log_inner() {
   echo "[${BASH_SOURCE##*/}:${1^^}] ${FUNCNAME[2]}@${BASH_LINENO[1]}: ${*:2}"
 }
 
-# check if 3ds address variable is set, exit otherwise
-if [[ -z $FTPD_3DS_ADDRESSES ]]; then log_inner error "Set server address trough FTPD_3DS_ADDRESSES env var"; exit 1; fi
-
-# ports parsing, if no ports are setted in the env var fallback to 21 for all host
-if [[ -z $FTPD_3DS_PORTS ]]; then FTPD_3DS_PORTS='21'; fi
-
-# directories
-if [[ -z $BASE_DIR ]];then BASE_DIR=/var/lib/backup_3ds; fi
-if [[ ! -d "$BASE_DIR" ]]; then mkdir -p "$BASE_DIR"; fi
-
-if [[ -z $BACKUP_DEST ]];then BACKUP_DEST="$BASE_DIR/backups"; fi
-if [[ ! -d "$BACKUP_DEST" ]]; then mkdir -p "$BACKUP_DEST"; fi
-
-if [[ -z $TEMPLATE_DIR ]];then TEMPLATE_DIR=/var/lib/backup_3ds/dashboard/templates; fi
-if [[ ! -d "$TEMPLATE_DIR" ]]; then mkdir -p "$TEMPLATE_DIR"; fi
-
-if [[ -z $WEB_ROOT ]];then WEB_ROOT=/var/lib/backup_3ds/dashboard/static; fi
-if [[ ! -d "$WEB_ROOT" ]]; then mkdir -p "$WEB_ROOT"; fi
-
-# stat dir to share information between cron instances of the script, this act as a folder for lock files
-if [[ -z $STAT_DIR ]];then STAT_DIR="/tmp/backup_3ds/status"; fi
-if [[ ! -d "$STAT_DIR" ]]; then mkdir -p "$STAT_DIR"; fi
-
-# parsing the 3DS directory to backup
-if [[ -z $BACKUP_DIRS ]];then BACKUP_DIRS="/"; fi
-
-if [[ -z $KEEP_LAST ]]; then KEEP_LAST=10; fi
-# Validate KEEP_LAST is a positive integer
-if ! [[ "$KEEP_LAST" =~ ^[0-9][0-9]*$ ]]; then log_inner error "KEEP_LAST must be a positive integer, but got $KEEP_LAST"; exit 1; fi
-
 # backup a single 3ds, parameters address port username password
 function backup(){
 
-  if [[ -z $1 ]];then log_inner error "pass address as parameter"; return 4; else address="$1"; fi
-  if [[ -z $2 ]];then port=21; else port="$2"; fi
-  username=$3
-  password=$4
+
+  if [[ -z $1 ]] || [[ "$1" == "null" ]];then log_inner error "set console name"; return 4; else name="$1"; fi
+  if [[ -n $2 ]] && [[ "$2" != "null" ]];then port="$2"; else port=21; fi
+  if [[ -n $3 ]] && [[ "$3" != "null" ]];then user="$3"; fi
+  if [[ -n $4 ]] && [[ "$4" != "null" ]];then password="$4"; fi
+
+  if [[ -n $user ]] && [[ -n $password ]]; then userpass="-u ${user},${password}"; else userpass=""; fi
 
   # set status file variable and initialize the file if it does not exist
-  stat_file="${STAT_DIR}/${address}"
+  stat_file="${STAT_DIR}/${name}"
+
   if [[ ! -f "$stat_file" ]]; then echo 1 > "$stat_file"; fi
 
   # setting backup dir for the specific 3ds
-  host_dir="${BACKUP_DEST}/${address}"
-  if [[ ! -d "$host_dir" ]]; then mkdir -p "$host_dir"; fi
+  host_dir="${BACKUP_DEST}/${name}"; mkdir -p "$host_dir"
 
-  # check if 3ds backup is running
-  if [[ $(cat "$stat_file") == "2" ]]; then log_inner info "backup of ${address} is running since $(stat -c '%y' "$stat_file")"; return 2; fi
+  # check if 3ds backup is running, exit if yes
+  if [[ $(cat "$stat_file") == "2" ]]; then log_inner info "backup of ${name} is running since $(stat -c '%y' "$stat_file")"; return 2; fi
 
-  # check if 3ds backup has been made
-  if [[ $(cat "$stat_file") == "0" ]]; then log_inner info "backup of ${address} has already been made at $(stat -c '%y' "$stat_file")"; return 1; fi
+  # check if 3ds backup has been made, exit if yes
+  if [[ $(cat "$stat_file") == "0" ]]; then log_inner info "backup of ${name} has already been made at $(stat -c '%y' "$stat_file")"; return 1; fi
 
-  # check if 3ds ftp server is up
-  if ! nc -z -w1 "$address" "$port"; then log_inner info "3ds at ${address}:${port} is not listening for ftp connections"; return 3; fi
+  # check if 3ds ftp server is up, exit if not
+  if ! nc -z -w1 "$name" "$port"; then log_inner info "console at ${name}:${port} is not listening for ftp connections"; return 3; fi
 
   # setting lock file to avoid running multiple backup jobs in parallel on the same 3DS
   echo 2 > "$stat_file"
-  log_inner info "starting 3DS backup of $address:$port"
+  log_inner info "starting console backup of $name:$port"
 
   timestamp="$(date +%s)"
 
   # loop all dirs to backup
-  IFS=';' read -ra dirs_to_backup <<< "$BACKUP_DIRS"
-  for dir in ${dirs_to_backup[@]}; do
+  yq ".consoles[] | select(.name == \"$name\").dirs | join(\"\n\")" "${CONFIG_FILE}" -r | while read dir; do
 
     dirname="$(echo "${dir}" | sed 's/\//-/g' | sed 's/^-//g')"
-    mkdir "${host_dir}/${address}_${timestamp}_${dirname}"
-    log_inner info "creating backup ${host_dir}/${address}_${timestamp}_${dirname} of ${dir}"
+    mkdir "${host_dir}/${name}_${timestamp}_${dirname}"
+    log_inner info "creating backup ${host_dir}/${name}_${timestamp}_${dirname} of ${dir}"
 
     # check for error codes and print error otherwise
-    if ncftpget -T -R -v -u "$username" -p "$password" -P "${port}" "${address}" "${host_dir}/${address}_${timestamp}_${dirname}" "${dir}"; then
+
+    log_inner info lftp -e "mirror --verbose=3 ${dir} ${host_dir}/${name}_${timestamp}_${dirname}" -p "${port}" "${userpass}" "${name}"
+    lftp -e "mirror --verbose=3 ${dir} ${host_dir}/${name}_${timestamp}_${dirname}" -p "${port}" "${userpass}" "${name}"
 
     # compress backup
-    ( cd ${host_dir} && zip -r "${address}_${timestamp}_${dirname}.zip"  "${address}_${timestamp}_${dirname}") || log_inner error "error archiving ${host_dir}/${address}_${timestamp}_${dirname}"
+    ( cd ${host_dir} && zip -r "${name}_${timestamp}_${dirname}.zip"  "${name}_${timestamp}_${dirname}") || log_inner error "error archiving ${host_dir}/${name}_${timestamp}_${dirname}"
 
     # removing downloaded files
-    rm -fr "${host_dir}/${address}_${timestamp}_${dirname}"
-    log_inner info "done backup of ${host_dir}/${address}_${timestamp}_${dirname} from ${address}"
-
-  else
-    log_inner error "error in downloading ${dir} from ${address}"
-    fi
+    rm -fr "${host_dir}/${name}_${timestamp}_${dirname}"
+    log_inner info "done backup of ${host_dir}/${name}_${timestamp}_${dirname} from ${name}"
 
   done
 
@@ -95,9 +78,9 @@ function backup(){
 
 function reset(){
 
-  if [[ -z $1 ]];then log_inner error "pass 3ds address as parameter"; return 1; else address="$1"; fi
+  if [[ -z $1 ]] || [[ "$1" == "null" ]];then log_inner error "set console name"; return 4; else name="$1"; fi
 
-  stat_file="${STAT_DIR}/${address}"
+  stat_file="${STAT_DIR}/${name}"
   # check if 3ds backup is running
   if [[ $(cat "$stat_file") == "2" ]]; then log_inner info "backup for $address is running since $(stat -c '%y' "$STAT_FILE"), avoid resetting"; return 0; fi
 
@@ -113,54 +96,41 @@ function generate_dashboard(){
   for dir in $(find "$BACKUP_DEST/"  -maxdepth 1 -not -path "$BACKUP_DEST/" -type d); do
     dir_name="$(basename "$dir")"
     log_inner info "generating backup page for $dir_name using data from $dir"
+    log_inner info "source <( bash-tpl "$TEMPLATE_DIR/backup_list.html.tpl" ) > $WEB_ROOT/$dir_name.html"
     source <( bash-tpl "$TEMPLATE_DIR/backup_list.html.tpl" ) > "$WEB_ROOT/$dir_name.html"
   done
 
 }
 
-# main function that loops the given hosts and runs the backup script
-function backup_cronjob(){
-
-  IFS=';' read -ra addresses <<< "$FTPD_3DS_ADDRESSES"
-  IFS=';' read -ra ports <<< "$FTPD_3DS_PORTS"
-  IFS=';' read -ra usernames <<< "$FTPD_3DS_USERNAMES"
-  IFS=';' read -ra passwords <<< "$FTPD_3DS_PASSWORDS"
-  for index in "${!addresses[@]}"; do
-    backup "${addresses[$index]}" "${ports[$index]}" "${usernames[$index]}" "${passwords[$index]}"
-  done
-  generate_dashboard
-
-}
-
-function reset_cronjob(){
-
-  IFS=';' read -ra addresses <<< "$FTPD_3DS_ADDRESSES"
-  for index in "${!addresses[@]}"; do
-    reset "${addresses[$index]}"
-  done
-
-}
 
 prune() {
 
-  if [[ -z $1 ]];then log_inner error "pass 3ds address as parameter"; return 1; else address="$1"; fi
+  # test if the console name is provided
+  if [[ -z $1 ]] || [[ "$1" == "null" ]];then log_inner error "set console name"; return 4; else name="$1"; fi
+
+  # get keep_last value from config file for the specific console, if not set use default KEEP_LAST
+  keep_last=$(yq ".consoles[] | select(.name == \"$name\").keep_last" "${CONFIG_FILE}")
+if [[ -z $keep_last ]] || [[ "$keep_last" == "null" ]]; then log_inner info "KEEP_LAST not set for $name, using default value of $KEEP_LAST"; keep_last=$KEEP_LAST; fi
+
+  # Validate KEEP_LAST is a positive integer
+  if ! [[ "$keep_last" =~ ^[0-9][0-9]*$ ]]; then log_inner error "KEEP_LAST must be a positive integer, but got $keep_last"; exit 1; fi
 
   # avoid pruning backups if KEEP_LAST variable is 0
-  if [[ $KEEP_LAST == "0" ]];then log_inner info " KEEP_LAST set to 0, avoid pruning "; return 0; fi
+  if [[ $keep_last == "0" ]];then log_inner info " KEEP_LAST set to 0, avoid pruning "; return 0; fi
 
-  log_inner info "Running pruning job for $address, keeping the last $KEEP_LAST."
+  log_inner info "Running pruning job for $name, keeping the last $KEEP_LAST."
 
   # Find all immediate subdirectories within BACKUP_DEST,
   # sort them by modification time (oldest first).
   # Then calculate how many to delete to keep only the KEEP_LAST newest.
-  backups_list=$(find "$BACKUP_DEST/$address" -name '*.zip' -printf '%T@ %p\n' | sort -n)
+  backups_list=$(find "$BACKUP_DEST/$name" -name '*.zip' -printf '%T@ %p\n' | sort -n)
   total_backups=$(echo "$backups_list" | wc -l)
 
   # Calculate how many backups to prune
-  num_to_prune=$(( total_backups - KEEP_LAST ))
+  num_to_prune=$(( total_backups - keep_last ))
 
   if [ "$num_to_prune" -gt 0 ]; then
-    log_inner info "Identified $total_backups backups in total, keeping $KEEP_LAST. Pruning $num_to_prune oldest backups."
+    log_inner info "Identified $total_backups backups in total, keeping $keep_last. Pruning $num_to_prune oldest backups."
     echo "$backups_list" | \
       head -n "$num_to_prune" | \
       cut -d' ' -f2- | \
@@ -173,15 +143,34 @@ prune() {
       return 1
     fi
   else
-    log_inner info "No backups to prune. Total backups: $total_backups, desired to keep: $KEEP_LAST."
+    log_inner info "No backups to prune. Total backups: $total_backups, desired to keep: $keep_last."
   fi
+}
+
+# main function that loops the given hosts and runs the backup script
+function backup_cronjob(){
+
+  log_inner info "Starting backup cronjob for all consoles defined in $CONFIG_FILE"
+  yq '.consoles[] | "\(.name) \(.port) \(.user) \(.password)"' "${CONFIG_FILE}" -r | while read name port user password; do
+    log_inner info "Parsed console from config: $name $port $user $password"
+    backup "$name" "$port" "$user" "$password" && generate_dashboard
+  done
+
+}
+
+function reset_cronjob(){
+
+  yq '.consoles[] | "\(.name)"' "${CONFIG_FILE}" -r | while read name; do
+    reset "${name}"
+  done
+
 }
 
 function prune_cronjob(){
 
-  IFS=';' read -ra addresses <<< "$FTPD_3DS_ADDRESSES"
-  for index in "${!addresses[@]}"; do
-    prune "${addresses[$index]}"
+  log_inner info "Starting prune cronjob for all consoles defined in $CONFIG_FILE"
+  yq '.consoles[] | "\(.name)"' "${CONFIG_FILE}" -r | while read name; do
+    prune "${name}"
   done
 
 }
