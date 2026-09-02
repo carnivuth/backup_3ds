@@ -5,10 +5,9 @@ ENV SHELL=/bin/bash
 RUN apt-get update
 
 # install dependencies
-RUN apt-get install -y cron lftp netcat-traditional zip lighttpd curl
+RUN apt-get install -y cron lftp netcat-traditional zip lighttpd curl jq
 RUN curl -Ls https://github.com/mikefarah/yq/releases/download/v4.53.6/yq_linux_amd64 -o /usr/bin/yq
 RUN chmod +x /usr/bin/yq
-RUN apt purge -y curl
 
 # setup crontab
 COPY ./etc/crontab /etc/

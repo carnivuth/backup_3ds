@@ -15,6 +15,7 @@ services:
         condition: service_started
       backup_3ds_ftp_server_2:
         condition: service_started
+    env_file: .env
     develop:
       watch:
 

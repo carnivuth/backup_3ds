@@ -17,6 +17,31 @@ log_inner() {
   echo "[${BASH_SOURCE##*/}:${1^^}] ${FUNCNAME[2]}@${BASH_LINENO[1]}: ${*:2}"
 }
 
+function telegram_send() {
+  test -z $TELEGRAM_TOKEN && log_inner warning "TELEGRAM_TOKEN is not set" && return 1
+  test -z $TELEGRAM_CHAT_ID && log_inner warning "TELEGRAM_CHAT_ID is not set" && return 1
+
+  MESSAGE="$(cat)"
+
+  RESPONSE="$(curl -sSf \
+    --request POST \
+    --url "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
+    --header "Content-Type: application/json" \
+    --data "$(jq -n \
+      --arg chat_id "$TELEGRAM_CHAT_ID" \
+      --arg text "$MESSAGE" \
+      '{chat_id: $chat_id, text: $text}'
+    )")"
+
+if echo "$RESPONSE" | jq -e '.ok == true' > /dev/null; then
+  log_inner info "Message to $TELEGRAM_CHAT_ID sent successfully."
+else
+  log_inner warning "Error sending message to $TELEGRAM_CHAT_ID" >&2
+  echo "$RESPONSE" | jq '.description' >&2
+  return 1
+fi
+}
+
 # backup a single 3ds, parameters address port username password
 function backup(){
 
@@ -57,6 +82,7 @@ function backup(){
     dirname="$(echo "${dir}" | sed 's/\//-/g' | sed 's/^-//g')"
     mkdir "${host_dir}/${name}_${timestamp}_${dirname}"
     log_inner info "creating backup ${host_dir}/${name}_${timestamp}_${dirname} of ${dir}"
+    echo "creating backup ${host_dir}/${name}_${timestamp}_${dirname} of ${dir}" | telegram_send
 
     # check for error codes and print error otherwise
 
@@ -69,6 +95,7 @@ function backup(){
     # removing downloaded files
     rm -fr "${host_dir}/${name}_${timestamp}_${dirname}"
     log_inner info "done backup of ${host_dir}/${name}_${timestamp}_${dirname} from ${name}"
+    echo "done backup of ${host_dir}/${name}_${timestamp}_${dirname} from ${name}" | telegram_send
 
   done
 
