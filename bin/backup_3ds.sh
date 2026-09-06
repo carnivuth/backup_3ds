@@ -73,6 +73,7 @@ function backup(){
   # setting lock file to avoid running multiple backup jobs in parallel on the same 3DS
   echo 2 > "$stat_file"
   log_inner info "starting console backup of $name:$port"
+  echo -e "Starting ${name}'s backup of\n$(yq ".consoles[] | select(.name == \"$name\").dirs | join(\"\n\")" "${CONFIG_FILE}" -r)" | telegram_send
 
   timestamp="$(date +%s)"
 
@@ -82,7 +83,6 @@ function backup(){
     dirname="$(echo "${dir}" | sed 's/\//-/g' | sed 's/^-//g')"
     mkdir "${host_dir}/${name}_${timestamp}_${dirname}"
     log_inner info "creating backup ${host_dir}/${name}_${timestamp}_${dirname} of ${dir}"
-    echo "creating backup ${host_dir}/${name}_${timestamp}_${dirname} of ${dir}" | telegram_send
 
     # check for error codes and print error otherwise
 
@@ -95,11 +95,11 @@ function backup(){
     # removing downloaded files
     rm -fr "${host_dir}/${name}_${timestamp}_${dirname}"
     log_inner info "done backup of ${host_dir}/${name}_${timestamp}_${dirname} from ${name}"
-    echo "done backup of ${host_dir}/${name}_${timestamp}_${dirname} from ${name}" | telegram_send
 
   done
 
   # setting status file to "backup done" to avoid consequent backups
+  echo -e "Done ${name}'s backup of\n$(yq ".consoles[] | select(.name == \"$name\").dirs | join(\"\n\")" "${CONFIG_FILE}" -r)" | telegram_send
   echo 0 > "$stat_file"
 }
 
