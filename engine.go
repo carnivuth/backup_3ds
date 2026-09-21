@@ -1,4 +1,4 @@
-package console_backupper
+package main
 
 func backupEngine() {}
 

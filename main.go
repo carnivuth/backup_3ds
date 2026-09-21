@@ -1,5 +1,5 @@
 // Main file, starts the web interface and the main go routine that manages backups
-package console_backupper
+package main
 import (
 	"log"
 	"net/http"
