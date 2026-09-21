@@ -1,62 +1,15 @@
 ---
 services:
-  backup_3ds:
-    container_name: backup_3ds
+  console_backupper:
+    container_name: console_backupper
     build: ./
-    environment:
-      - ENABLE_DASHBOARD=true
     ports:
-      - 8080:80
+      - 8080:8080
     volumes:
-      - "/tmp/backup_3ds:/var/lib/backup_3ds/backups"
-      - "./config.yml:/etc/backup_3ds/config.yml:ro"
-    depends_on:
-      backup_3ds_ftp_server_1:
-        condition: service_started
-      backup_3ds_ftp_server_2:
-        condition: service_started
-    env_file: .env
+      - "/tmp/console_backupper:/var/lib/console_backupper"
+      - "./config.yml:/etc/console_backupper/config.yml:ro"
     develop:
       watch:
 
-        - path: ./dashboard/style/style.css
-          action: sync+restart
-          target: /var/lib/backup_3ds/dashboard/static/style.css
-
-        - path: ./dashboard/templates
+        - path: ./*.go
           action: rebuild
-
-        - path: ./Dockerfile
-          action: rebuild
-
-        - path: ./bin
-          action: rebuild
-
-        - path: ./etc
-          action: rebuild
-
-        - path: ./docker-compose.yaml
-          action: rebuild
-
-  # ftp servers for debugging
-  backup_3ds_ftp_server_1:
-    container_name: backup_3ds_ftp_server_1
-    image: delfer/alpine-ftp-server
-    environment:
-      - "USERS=ds|supersecretpassword|/home/ds|1000"
-      - ADDRESS=backup_3ds_ftp_server_1
-    expose:
-      - 21
-    volumes:
-      - "./debug/data1:/home/ds"
-
-  backup_3ds_ftp_server_2:
-    container_name: backup_3ds_ftp_server_2
-    image: delfer/alpine-ftp-server
-    environment:
-      - "USERS=ds|supersecretpassword|/home/ds|1000"
-      - ADDRESS=backup_3ds_ftp_server_2
-    expose:
-      - 21
-    volumes:
-      - "./debug/data2:/home/ds"
