@@ -1,4 +1,4 @@
-package main
+package web
 
 import (
 	"html/template"
@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"utils"
 )
 
 type HomeData struct {
@@ -26,7 +27,7 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// get consoles
-	datadir := getenv("CONSOLE_BACKUPPER_DATA_DIR", "/var/lib/console_backupper")
+	datadir := Getenv("CONSOLE_BACKUPPER_DATA_DIR", "/var/lib/console_backupper")
 	consoles, err := os.ReadDir(datadir)
 	if err != nil {
 		log.Fatal(err)
@@ -47,7 +48,7 @@ func backupHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	datadir := getenv("CONSOLE_BACKUPPER_DATA_DIR", "/var/lib/console_backupper")
+	datadir := Getenv("CONSOLE_BACKUPPER_DATA_DIR", "/var/lib/console_backupper")
 	backups, err := os.ReadDir(filepath.Join(datadir, console))
 	if err != nil {
 		log.Fatal(err)
