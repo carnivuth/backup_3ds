@@ -15,7 +15,7 @@
       <a href="/"><h1>Console dashboard</h1></a>
     </header>
 
-    <div class="count"><span><%% ls "$BACKUP_DEST" | wc -l  %></span> Consoles</div>
+    <div class="count"><span>{{ .ConsoleNumber }}</span> Consoles</div>
     <div class="count">Used space <span><%% du -hs  "$BACKUP_DEST" | awk '{print $1}'   %></span> </div>
 
     <div class="list">
