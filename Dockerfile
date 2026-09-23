@@ -7,5 +7,6 @@ FROM alpine:3.24 AS console_backupper
 
 COPY --from=build /app/console_backupper /console_backupper
 COPY ./templates /templates
+COPY ./static /static
 EXPOSE 8080
 ENTRYPOINT [ "/console_backupper" ]

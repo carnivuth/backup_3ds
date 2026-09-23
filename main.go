@@ -3,16 +3,17 @@ package main
 import (
 	"log"
 	"net/http"
-	"engine"
-	"web"
+	"console_backupper/engine"
+	"console_backupper/web"
 )
 
 
 func main() {
-	http.HandleFunc("/", homeHandler)
-	http.HandleFunc("/:console", backupHandler)
+	http.HandleFunc("/", web.HomeHandler)
+	http.HandleFunc("/:console", web.BackupHandler)
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	log.Println("Starting backup engine")
-	go BackupEngine()
+	go engine.BackupEngine()
 	log.Println("Listening on :8080")
 	http.ListenAndServe(":8080", nil)
 }
