@@ -1,17 +1,20 @@
 // Main file, starts the web interface and the main go routine that manages backups
 package main
+
 import (
+	"console_backupper/engine"
+	"console_backupper/utils"
+	"console_backupper/web"
 	"log"
 	"net/http"
-	"console_backupper/engine"
-	"console_backupper/web"
 )
 
 
 func main() {
+	http.HandleFunc("/consoles/:console", web.ConsoleHandler)
 	http.HandleFunc("/", web.HomeHandler)
-	http.HandleFunc("/:console", web.ConsoleHandler)
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+	http.Handle("/downloads/", http.StripPrefix("/downloads/", http.FileServer(http.Dir(utils.Getenv("CONSOLE_BACKUPPER_DATA_DIR", "/var/lib/console_backupper")))))
 	log.Println("Starting backup engine")
 	go engine.BackupEngine()
 	log.Println("Listening on :8080")

@@ -11,8 +11,9 @@ import (
 
 
 type ConsoleData struct {
-	ConsoleNumber int
-	Consoles []os.DirEntry
+	Name string
+	BackupsNumber int
+	Backups []os.DirEntry
 }
 
 
@@ -31,7 +32,7 @@ func ConsoleHandler(w http.ResponseWriter, r *http.Request) {
 		log.Fatal(err)
 	}
 	backupNumber := len(backups)
-	data := ConsoleData{ ConsoleNumber: backupNumber, Consoles: backups}
+	data := ConsoleData{ BackupsNumber: backupNumber, Backups: backups, Name: console }
 	if err := tmpl.Execute(w, data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
