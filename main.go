@@ -10,7 +10,7 @@ import (
 
 func main() {
 	http.HandleFunc("/", web.HomeHandler)
-	http.HandleFunc("/:console", web.BackupHandler)
+	http.HandleFunc("/:console", web.ConsoleHandler)
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	log.Println("Starting backup engine")
 	go engine.BackupEngine()

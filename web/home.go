@@ -5,18 +5,12 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
 	"console_backupper/utils"
 )
 
 type HomeData struct {
 	ConsoleNumber int
 	Consoles []os.DirEntry
-}
-
-type BackupData struct {
-	BackupNumber int
-	Backups []os.DirEntry
 }
 
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
@@ -34,27 +28,6 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	ConsoleNumber := len(consoles)
 	data := HomeData{ConsoleNumber: ConsoleNumber, Consoles: consoles }
-	if err := tmpl.Execute(w, data); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-}
-
-func BackupHandler(w http.ResponseWriter, r *http.Request) {
-
-	console := r.PathValue("console")
-	tmpl, err := template.ParseFiles("templates/backup.html")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	datadir := utils.Getenv("CONSOLE_BACKUPPER_DATA_DIR", "/var/lib/console_backupper")
-	backups, err := os.ReadDir(filepath.Join(datadir, console))
-	if err != nil {
-		log.Fatal(err)
-	}
-	backupNumber := len(backups)
-	data := BackupData{ BackupNumber: backupNumber, Backups: backups}
 	if err := tmpl.Execute(w, data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}

@@ -10,6 +10,10 @@ services:
       - "./config.yml:/etc/console_backupper/config.yml:ro"
     develop:
       watch:
+        - path: ./web/*.go
+          action: rebuild
+        - path: ./engine/*.go
+          action: rebuild
         - path: ./*.go
           action: rebuild
         - path: ./templates/*.html
