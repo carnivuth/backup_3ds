@@ -11,8 +11,8 @@ import (
 
 
 func main() {
-	http.HandleFunc("/consoles/:console", web.ConsoleHandler)
 	http.HandleFunc("/", web.HomeHandler)
+	http.HandleFunc("/consoles/{console}", web.ConsoleHandler)
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	http.Handle("/downloads/", http.StripPrefix("/downloads/", http.FileServer(http.Dir(utils.Getenv("CONSOLE_BACKUPPER_DATA_DIR", "/var/lib/console_backupper")))))
 	log.Println("Starting backup engine")

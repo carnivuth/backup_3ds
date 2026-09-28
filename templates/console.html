@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Backup 3DS dashboard</title>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
   <div class="glow"></div>
@@ -20,8 +20,8 @@
 
     <div class="list">
 
-      {{ range .consoles }}
-      <a href='downloads/{{ $.Name }}/{{ .Name }}'>
+      {{ range .Backups }}
+      <a href='/downloads/{{ $.Name }}/{{ .Name }}' download>
                   <div class='item'>
                     <div class='item-icon' style='background:rgba(200,255,94,0.12)'>💾</div>
                     <div class='item-body'>
