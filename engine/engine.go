@@ -24,9 +24,14 @@ func BackupEngine() {
 	log.Printf("Starting backup engine with the following configuration:")
 	log.Printf("%+v",backupConfig)
 	for _, console := range backupConfig.Consoles {
-		go BackupConsole(console)
+		for _, dir := range console.Dirs {
+			go BackupConsole(console,dir)
+		}
 	}
 }
-func BackupConsole(console ConsoleConfig ){
-
+func BackupConsole(console ConsoleConfig, dir string){
+	log.Printf("coping %s from %s",dir,console.Name)
+	// TODO: copy content recursively from ftp server
+	log.Printf("archiving %s",dir)
+	// TODO: archive the content in a tar.gz file
 }
