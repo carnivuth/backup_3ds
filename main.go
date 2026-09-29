@@ -11,14 +11,16 @@ import (
 
 
 func main() {
+	consoleBackupNotificationChannel := make(chan engine.ConsoleConfig)
+
+	go engine.BackupEngine(consoleBackupNotificationChannel)
+
+	engine.ConfigScanEngine(utils.Getenv("CONSOLE_BACKUPPER_CONFIG_FILE", "/etc/console_backupper/config.yml"), consoleBackupNotificationChannel,1)
+
 	http.HandleFunc("/", web.HomeHandler)
 	http.HandleFunc("/consoles/{console}", web.ConsoleHandler)
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	http.Handle("/downloads/", http.StripPrefix("/downloads/", http.FileServer(http.Dir(utils.Getenv("CONSOLE_BACKUPPER_DATA_DIR", "/var/lib/console_backupper")))))
-	log.Println("Starting backup engine")
-	consoleBackupNotificationChannel := make(chan engine.ConsoleConfig)
-	go engine.BackupEngine(consoleBackupNotificationChannel)
-	engine.ConfigScanEngine(utils.Getenv("CONSOLE_BACKUPPER_CONFIG_FILE", "/etc/console_backupper/config.yml"), consoleBackupNotificationChannel,1)
 	log.Println("Listening on :8080")
 	http.ListenAndServe(":8080", nil)
 }
