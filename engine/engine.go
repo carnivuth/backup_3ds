@@ -1,11 +1,14 @@
 package engine
 
 import (
+	"console_backupper/ftpdl"
 	"log"
 	"os"
-	"gopkg.in/yaml.v3"
+	"path/filepath"
 	"time"
+	"gopkg.in/yaml.v3"
 )
+
 // run backup config every minute, return a channel to interrupt the cron
 func ConfigScanEngine(configFilePath string, backupNotificationChannel chan ConsoleConfig,backupInterval int) chan bool {
 	ticker := time.NewTicker(time.Duration(backupInterval) * time.Minute)
@@ -34,8 +37,7 @@ func ConfigScan(configFilePath string, backupNotificationChannel chan ConsoleCon
 	}
 	err = yaml.Unmarshal(configFile, &backupConfig)
 	if err != nil {
-		log.Fatalf("error in Unmarshaling configuration file at %s", configFilePath )
-	}
+		log.Fatalf("error in Unmarshaling configuration file at %s", configFilePath ) }
 	log.Printf("Starting console backups with the following configuration:")
 	log.Printf("%+v",backupConfig)
 	for _, console := range backupConfig.Consoles {
@@ -55,6 +57,7 @@ func BackupEngine(backupNotificationChannel chan ConsoleConfig) {
 
 func BackupConsole(console ConsoleConfig, dir string){
 	log.Printf("coping %s from %s",dir,console.Name)
+	ftpdl.ConnectAndDownloadDir(console.Name,console.Port,dir,filepath.Join("/var/lib/console_backupper",console.Name,dir))
 	// TODO: copy content recursively from ftp server
 	log.Printf("archiving %s",dir)
 	// TODO: archive the content in a tar.gz file
