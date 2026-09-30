@@ -15,6 +15,7 @@ func ConfigScanEngine(configFilePath string, backupNotificationChannel chan Cons
 	quit := make(chan bool, 1)
 	go func() {
 		log.Printf("Starting ConfigScanEngine")
+		ConfigScan(configFilePath,backupNotificationChannel)
 		for {
 			select {
 			case <-ticker.C:
