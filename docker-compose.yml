@@ -19,3 +19,26 @@ services:
         - path: ./templates
           target: /app/templates
           action: sync+restart
+
+  # ftp servers for debugging
+  console_1:
+    container_name: console_1
+    image: delfer/alpine-ftp-server
+    environment:
+      - "USERS=ds||/home/ds|1000"
+      - ADDRESS=console_1
+    expose:
+      - 21
+    volumes:
+      - "/tmp/console/debug/data1:/home/ds"
+
+  console_2:
+    container_name: console_2
+    image: delfer/alpine-ftp-server
+    environment:
+      - "USERS=ds||/home/ds|1000"
+      - ADDRESS=console_2
+    expose:
+      - 21
+    volumes:
+      - "/tmp/console/debug/data2:/home/ds"
