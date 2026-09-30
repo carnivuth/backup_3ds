@@ -17,6 +17,7 @@ import (
 // Symlinks are skipped.
 func DownloadDir(c *ftp.ServerConn, remoteDir, localDir string) error {
 	if err := os.MkdirAll(localDir, 0o755); err != nil {
+		log.Printf("Failed to create local directory %s", localDir)
 		return err
 	}
 
@@ -24,7 +25,8 @@ func DownloadDir(c *ftp.ServerConn, remoteDir, localDir string) error {
 	// connection at a time, so we must not Retr while a listing is open.
 	entries, err := c.List(remoteDir)
 	if err != nil {
-		return fmt.Errorf("list %s: %w", remoteDir, err)
+		log.Printf("Error listing %s", remoteDir)
+		return err
 	}
 
 	for _, e := range entries {
@@ -76,17 +78,19 @@ func downloadFile(c *ftp.ServerConn, remotePath, localPath string) (err error) {
 	return nil
 }
 
-func ConnectAndDownloadDir(addr string,port int, remoteDir, localDir string){
+func ConnectAndDownloadDir(addr string,port int, remoteDir, localDir string) error{
 
 	connectionString := fmt.Sprintf("%s:%d", addr, port)
 	c, err := ftp.Dial(connectionString, ftp.DialWithTimeout(10*time.Second))
 	if err != nil {
  		log.Printf("Failed to connect to FTP server: %v", err)
+		return err
 	}
 	defer c.Quit()
 
 	if err := DownloadDir(c, remoteDir, localDir); err != nil {
-		log.Fatal(err)
+		log.Printf("Failed to download %s from %s",remoteDir,addr)
+		return err
 	}
-
+	return nil
 }
