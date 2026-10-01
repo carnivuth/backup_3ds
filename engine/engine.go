@@ -2,7 +2,6 @@ package engine
 
 import (
 	"console_backupper/model"
-	"console_backupper/utils"
 	"log"
 	"time"
 )
@@ -20,7 +19,7 @@ func Engine(
 	backupsToKeep int) {
 
 		log.Printf("Starting Engine")
-		config := utils.ParseConfig(configFilePath)
+		config := model.GetBackupConfig(configFilePath)
 		go config.StartBackups(backupNotificationChannel)
 
 		for {

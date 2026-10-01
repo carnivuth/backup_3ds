@@ -1,15 +1,16 @@
 package web
 
 import (
+	"console_backupper/model"
+	"console_backupper/utils"
 	"html/template"
 	"net/http"
-	"console_backupper/utils"
 )
 
 func ConsoleHandler(w http.ResponseWriter, r *http.Request) {
 
 	configFilePath := utils.Getenv("CONSOLE_BACKUPPER_CONFIG_FILE", "/etc/console_backupper/config.yml")
-	backupConfig := utils.ParseConfig(configFilePath)
+	backupConfig := model.GetBackupConfig(configFilePath)
 	consoleName := r.PathValue("console")
 	console := backupConfig.FindConsoleConfigByName(consoleName)
 
@@ -24,7 +25,7 @@ func ConsoleHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := tmpl.Execute(w, *console); err != nil {
+	if err := tmpl.Execute(w, console); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
