@@ -3,12 +3,13 @@ package main
 
 import (
 	"console_backupper/engine"
+	"console_backupper/model"
 	"console_backupper/utils"
 	"console_backupper/web"
 	"log"
 	"net/http"
-	"time"
 	"strconv"
+	"time"
 )
 
 
@@ -19,14 +20,22 @@ func main() {
 		log.Fatalf("Invalid backup interval: %s %v",backupInterval, err)
 	}
 
-	backupNotificationChannel := make(chan engine.ConsoleConfig)
-	quitChannel := make(chan bool, 1)
-	ticker := time.NewTicker(time.Duration(backupInterval) * time.Minute)
+	pruneInterval, err := strconv.Atoi(utils.Getenv("CONSOLE_BACKUPPER_PRUNE_INTERVAL", "1"))
+	if err != nil {
+		log.Fatalf("Invalid prune interval: %s %v",pruneInterval, err)
+	}
+
 	dataDir := utils.Getenv("CONSOLE_BACKUPPER_DATA_DIR","/var/lib/console_backupper")
 	cacheDir := utils.Getenv("CONSOLE_BACKUPPER_CACHE_DIR","/var/cache/console_backupper")
 	configFilePath := utils.Getenv("CONSOLE_BACKUPPER_CONFIG_FILE", "/etc/console_backupper/config.yml")
+	backupsToKeep, err := strconv.Atoi(utils.Getenv("CONSOLE_BACKUPPER_BACKUPS_TO_KEEP", "5"))
 
-	go engine.Engine(configFilePath,backupNotificationChannel,ticker,quitChannel,dataDir,cacheDir)
+	backupNotificationChannel := make(chan model.ConsoleConfig)
+	pruneNotificationChannel := make(chan model.ConsoleConfig)
+	quitChannel := make(chan bool, 1)
+	scanNotificationTicker := time.NewTicker(time.Duration(backupInterval) * time.Minute)
+
+	go engine.Engine(configFilePath,backupNotificationChannel,scanNotificationTicker,pruneNotificationChannel,quitChannel,dataDir,cacheDir,backupsToKeep)
 
 	http.HandleFunc("/", web.HomeHandler)
 	http.HandleFunc("/consoles/{console}", web.ConsoleHandler)

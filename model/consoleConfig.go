@@ -1,8 +1,4 @@
-package engine
-
-type BackupConfig struct {
-	Consoles []ConsoleConfig
-}
+package model
 
 type ConsoleConfig struct {
 	Name string `yaml:"name"`
