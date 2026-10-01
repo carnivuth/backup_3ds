@@ -6,7 +6,9 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+	"strings"
 	"gopkg.in/yaml.v3"
+	"console_backupper/compress"
 )
 
 // run backup config every minute, return a channel to interrupt the cron
@@ -46,25 +48,35 @@ func ConfigScan(configFilePath string, backupNotificationChannel chan ConsoleCon
 	}
 }
 
-func BackupEngine(backupNotificationChannel chan ConsoleConfig) {
+func BackupEngine(backupNotificationChannel chan ConsoleConfig,dataDir string, cacheDir string) {
 	log.Printf("Starting backup engine")
 	for {
 		consoleToBackup := <-backupNotificationChannel
 		for _, dir := range consoleToBackup.Dirs {
-			go BackupConsole(consoleToBackup, dir)
+			go BackupConsole(consoleToBackup, dir,dataDir,cacheDir)
 		}
 	}
 }
 
-func BackupConsole(console ConsoleConfig, dir string){
+func BackupConsole(console ConsoleConfig, dir string,dataDir string,cacheDir string){
 	log.Printf("coping %s from %s",dir,console.Name)
-	if err := ftpdl.ConnectAndDownloadDir(console.Name,console.Port,console.User,console.Password,dir,filepath.Join("/var/lib/console_backupper",console.Name,dir)); err != nil {
+	if err := ftpdl.ConnectAndDownloadDir(console.Name,console.Port,console.User,console.Password,dir,filepath.Join(cacheDir,console.Name,dir)); err != nil {
 		log.Printf("error in downloading %s from %s error: %v",dir,console.Name,err )
 	}
 
-
-
-	// TODO: copy content recursively from ftp server
 	log.Printf("archiving %s",dir)
-	// TODO: archive the content in a tar.gz file
+	zipFileDir := filepath.Join(dataDir,console.Name)
+	zipFileName := console.Name + "-" + strings.Replace(dir,"/","-",-1) + "-" + time.Now().Format("2006-01-02-15-04-05") + ".zip"
+
+	if err := os.MkdirAll(zipFileDir, 0o755); err != nil {
+		log.Printf("Failed to create local directory %s error: %v", zipFileDir, err)
+
+	}
+
+	if err := compress.ZipDir(filepath.Join(cacheDir,console.Name,dir), filepath.Join(zipFileDir,zipFileName)); err != nil {
+		log.Printf("error in archiving %s, Error: %v", dir, err)
+	}
+
+	log.Printf("archive %s created",zipFileName)
+
 }

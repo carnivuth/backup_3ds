@@ -13,7 +13,7 @@ import (
 func main() {
 	consoleBackupNotificationChannel := make(chan engine.ConsoleConfig)
 
-	go engine.BackupEngine(consoleBackupNotificationChannel)
+	go engine.BackupEngine(consoleBackupNotificationChannel,utils.Getenv("CONSOLE_BACKUPPER_DATA_DIR","/var/lib/console_backupper"),utils.Getenv("CONSOLE_BACKUPPER_CACHE_DIR","/var/cache/console_backupper"))
 
 	engine.ConfigScanEngine(utils.Getenv("CONSOLE_BACKUPPER_CONFIG_FILE", "/etc/console_backupper/config.yml"), consoleBackupNotificationChannel,1)
 
