@@ -9,9 +9,9 @@ import (
 // Main backend function, it handles backup scheduling and pruning
 func Engine(
 	configFilePath string,
-	backupNotificationChannel chan model.ConsoleConfig,
+	backupNotificationChannel chan *model.ConsoleConfig,
 	scanNotificationChannel *time.Ticker,
-	pruneNotificationChannel chan model.ConsoleConfig,
+	pruneNotificationChannel chan *model.ConsoleConfig,
 	quitChannel chan bool,
 	dataDir string,
 	cacheDir string,
@@ -24,13 +24,9 @@ func Engine(
 			case <-scanNotificationChannel.C:
 				go ConfigScan(configFilePath,backupNotificationChannel)
 			case consoleToBackup := <- backupNotificationChannel:
-				for _, dir := range consoleToBackup.Dirs {
-					go BackupConsole(consoleToBackup, dir,dataDir,cacheDir,pruneNotificationChannel)
-				}
+				go consoleToBackup.BackupConsole(dataDir,cacheDir,pruneNotificationChannel)
 			case consoleToPrune := <- pruneNotificationChannel:
-				for _, dir := range consoleToPrune.Dirs {
-				go pruneBackups(consoleToPrune,dir,dataDir,backupsToKeep)
-				}
+				go consoleToPrune.PruneBackups(dataDir,backupsToKeep)
 			case <-quitChannel:
 				log.Printf("Shutting down Engine")
 				return

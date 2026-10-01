@@ -5,11 +5,11 @@ import (
 	"console_backupper/utils"
 )
 
-func ConfigScan(configFilePath string, backupNotificationChannel chan model.ConsoleConfig){
+func ConfigScan(configFilePath string, backupNotificationChannel chan *model.ConsoleConfig){
 
 	backupConfig := utils.ParseConfig(configFilePath)
-	for _, console := range backupConfig.Consoles {
-		backupNotificationChannel <- console
+	for i,_ := range backupConfig.Consoles {
+		backupNotificationChannel <- &backupConfig.Consoles[i]
 	}
 }
 

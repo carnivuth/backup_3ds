@@ -30,8 +30,8 @@ func main() {
 	configFilePath := utils.Getenv("CONSOLE_BACKUPPER_CONFIG_FILE", "/etc/console_backupper/config.yml")
 	backupsToKeep, err := strconv.Atoi(utils.Getenv("CONSOLE_BACKUPPER_BACKUPS_TO_KEEP", "5"))
 
-	backupNotificationChannel := make(chan model.ConsoleConfig)
-	pruneNotificationChannel := make(chan model.ConsoleConfig)
+	backupNotificationChannel := make(chan *model.ConsoleConfig)
+	pruneNotificationChannel := make(chan *model.ConsoleConfig)
 	quitChannel := make(chan bool, 1)
 	scanNotificationTicker := time.NewTicker(time.Duration(backupInterval) * time.Minute)
 
