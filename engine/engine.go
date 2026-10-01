@@ -1,16 +1,18 @@
 package engine
 
 import (
+	"console_backupper/model"
+	"console_backupper/utils"
 	"log"
 	"time"
-	"console_backupper/model"
 )
 
 // Main backend function, it handles backup scheduling and pruning
 func Engine(
 	configFilePath string,
 	backupNotificationChannel chan *model.ConsoleConfig,
-	scanNotificationChannel *time.Ticker,
+	startBackupsTimer *time.Ticker,
+	resetBackupsTimer *time.Ticker,
 	pruneNotificationChannel chan *model.ConsoleConfig,
 	quitChannel chan bool,
 	dataDir string,
@@ -18,11 +20,15 @@ func Engine(
 	backupsToKeep int) {
 
 		log.Printf("Starting Engine")
-		go ConfigScan(configFilePath,backupNotificationChannel)
+		config := utils.ParseConfig(configFilePath)
+		go config.StartBackups(backupNotificationChannel)
+
 		for {
 			select {
-			case <-scanNotificationChannel.C:
-				go ConfigScan(configFilePath,backupNotificationChannel)
+			case <-startBackupsTimer.C:
+				go config.StartBackups(backupNotificationChannel)
+			case <-resetBackupsTimer.C:
+				go config.ResetBackupStates()
 			case consoleToBackup := <- backupNotificationChannel:
 				go consoleToBackup.BackupConsole(dataDir,cacheDir,pruneNotificationChannel)
 			case consoleToPrune := <- pruneNotificationChannel:

@@ -20,6 +20,11 @@ func main() {
 		log.Fatalf("Invalid backup interval: %s %v",backupInterval, err)
 	}
 
+	resetInterval, err := strconv.Atoi(utils.Getenv("CONSOLE_BACKUPPER_RESET_INTERVAL", "10"))
+	if err != nil {
+		log.Fatalf("Invalid backup interval: %s %v",backupInterval, err)
+	}
+
 	pruneInterval, err := strconv.Atoi(utils.Getenv("CONSOLE_BACKUPPER_PRUNE_INTERVAL", "1"))
 	if err != nil {
 		log.Fatalf("Invalid prune interval: %s %v",pruneInterval, err)
@@ -33,9 +38,10 @@ func main() {
 	backupNotificationChannel := make(chan *model.ConsoleConfig)
 	pruneNotificationChannel := make(chan *model.ConsoleConfig)
 	quitChannel := make(chan bool, 1)
-	scanNotificationTicker := time.NewTicker(time.Duration(backupInterval) * time.Minute)
+	startBackupsTimer := time.NewTicker(time.Duration(backupInterval) * time.Minute)
+	resetBackupsTimer := time.NewTicker(time.Duration(resetInterval) * time.Minute)
 
-	go engine.Engine(configFilePath,backupNotificationChannel,scanNotificationTicker,pruneNotificationChannel,quitChannel,dataDir,cacheDir,backupsToKeep)
+	go engine.Engine(configFilePath,backupNotificationChannel,startBackupsTimer,resetBackupsTimer,pruneNotificationChannel,quitChannel,dataDir,cacheDir,backupsToKeep)
 
 	http.HandleFunc("/", web.HomeHandler)
 	http.HandleFunc("/consoles/{console}", web.ConsoleHandler)

@@ -21,35 +21,44 @@ type ConsoleConfig struct {
 	Port int `yaml:"port"`
 	Dirs []string `yaml:"dirs"`
 	RunningBackup sync.Mutex `yaml:"-"`
+	DoneBackup bool `yaml:"-"`
 }
 func (console *ConsoleConfig) BackupConsole(dataDir string,cacheDir string,pruneNotificationChannel chan *ConsoleConfig){
 
-	console.RunningBackup.Lock()
-	defer console.RunningBackup.Unlock()
-	for _, dir := range console.Dirs {
-		log.Printf("coping %s from %s",dir,console.Name)
-		if err := ftpdl.ConnectAndDownloadDir(console.Name,console.Port,console.User,console.Password,dir,filepath.Join(cacheDir,console.Name,dir)); err != nil {
-			log.Printf("error in downloading %s from %s error: %v",dir,console.Name,err )
-			return
+	if console.DoneBackup{
+		log.Printf("Backup for %s already done, skipping",console.Name)
+		return
+	}
+
+	if console.RunningBackup.TryLock(){
+		log.Printf("Starting backup for %s",console.Name)
+		defer console.RunningBackup.Unlock()
+		for _, dir := range console.Dirs {
+			log.Printf("coping %s from %s",dir,console.Name)
+			if err := ftpdl.ConnectAndDownloadDir(console.Name,console.Port,console.User,console.Password,dir,filepath.Join(cacheDir,console.Name,dir)); err != nil {
+				log.Printf("error in downloading %s from %s error: %v",dir,console.Name,err )
+				return
+			}
+
+			log.Printf("archiving %s",dir)
+			zipFileDir := filepath.Join(dataDir,console.Name,strings.Replace(dir,"/","-",-1))
+			zipFileName := console.Name + "-" + strings.Replace(dir,"/","-",-1) + "-" + time.Now().Format("2006-01-02-15-04-05") + ".zip"
+
+			if err := os.MkdirAll(zipFileDir, 0o755); err != nil {
+				log.Printf("Failed to create local directory %s error: %v", zipFileDir, err)
+				return
+
+			}
+
+			if err := compress.ZipDir(filepath.Join(cacheDir,console.Name,dir), filepath.Join(zipFileDir,zipFileName)); err != nil {
+				log.Printf("error in archiving %s, Error: %v", dir, err)
+				return
+			}
+
+			log.Printf("archive %s created",zipFileName)
+			console.DoneBackup = true
+			pruneNotificationChannel <- console
 		}
-
-		log.Printf("archiving %s",dir)
-		zipFileDir := filepath.Join(dataDir,console.Name,strings.Replace(dir,"/","-",-1))
-		zipFileName := console.Name + "-" + strings.Replace(dir,"/","-",-1) + "-" + time.Now().Format("2006-01-02-15-04-05") + ".zip"
-
-		if err := os.MkdirAll(zipFileDir, 0o755); err != nil {
-			log.Printf("Failed to create local directory %s error: %v", zipFileDir, err)
-			return
-
-		}
-
-		if err := compress.ZipDir(filepath.Join(cacheDir,console.Name,dir), filepath.Join(zipFileDir,zipFileName)); err != nil {
-			log.Printf("error in archiving %s, Error: %v", dir, err)
-			return
-		}
-
-		log.Printf("archive %s created",zipFileName)
-		pruneNotificationChannel <- console
 	}
 }
 
