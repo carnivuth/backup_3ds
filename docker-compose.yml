@@ -8,6 +8,11 @@ services:
     volumes:
       - "/tmp/console_backupper:/var/lib/console_backupper"
       - "./config.yml:/etc/console_backupper/config.yml:ro"
+    depends_on:
+      console_1:
+        condition: service_started
+      console_2:
+        condition: service_started
     develop:
       watch:
         - path: ./web
