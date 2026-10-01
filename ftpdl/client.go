@@ -30,25 +30,20 @@ func DownloadDir(c *ftp.ServerConn, remoteDir, localDir string) error {
 	}
 
 	for _, e := range entries {
-		if e.Name == "." || e.Name == ".." {
-			continue
-		}
-		// Guard against a malicious server sending names like "../../x".
-		if strings.ContainsAny(e.Name, `/\`) {
-			continue
-		}
+		if e.Name != "." && e.Name != ".." && ! strings.ContainsAny(e.Name, `/\`){
 
-		remotePath := path.Join(remoteDir, e.Name) // remote paths always use "/"
-		localPath := filepath.Join(localDir, e.Name)
+			remotePath := path.Join(remoteDir, e.Name) // remote paths always use "/"
+			localPath := filepath.Join(localDir, e.Name)
 
-		switch e.Type {
-		case ftp.EntryTypeFolder:
-			if err := DownloadDir(c, remotePath, localPath); err != nil {
-				return err
-			}
-		case ftp.EntryTypeFile:
-			if err := downloadFile(c, remotePath, localPath); err != nil {
-				return err
+			switch e.Type {
+			case ftp.EntryTypeFolder:
+				if err := DownloadDir(c, remotePath, localPath); err != nil {
+					return err
+				}
+			case ftp.EntryTypeFile:
+				if err := downloadFile(c, remotePath, localPath); err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -73,7 +68,8 @@ func downloadFile(c *ftp.ServerConn, remotePath, localPath string) (err error) {
 	}()
 
 	if _, err = io.Copy(f, resp); err != nil {
-		return fmt.Errorf("download %s: %w", remotePath, err)
+		log.Printf("error in downloading %s", remotePath)
+		return err
 	}
 	return nil
 }
@@ -83,12 +79,12 @@ func ConnectAndDownloadDir(addr string,port int,user string, password string, re
 	connectionString := fmt.Sprintf("%s:%d", addr, port)
 	c, err := ftp.Dial(connectionString, ftp.DialWithTimeout(10*time.Second))
 	if err != nil {
- 		log.Printf("Failed to connect to FTP server: %v", err)
+		log.Printf("Failed to connect to FTP server: %v", err)
 		return err
 	}
 	defer c.Quit()
 	if err := c.Login(user,password); err != nil {
- 		log.Printf("Failed to login to FTP server: %s as %s",addr,user)
+		log.Printf("Failed to login to FTP server: %s as %s",addr,user)
 		return err
 	}
 
