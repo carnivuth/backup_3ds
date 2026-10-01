@@ -29,6 +29,7 @@ services:
   console_1:
     container_name: console_1
     image: delfer/alpine-ftp-server
+    restart: always
     environment:
       - "USERS=ds||/home/ds|1000"
       - ADDRESS=console_1
@@ -38,6 +39,7 @@ services:
       - "/tmp/console/debug/data1:/home/ds"
 
   console_2:
+    restart: always
     container_name: console_2
     image: delfer/alpine-ftp-server
     environment:
