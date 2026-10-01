@@ -99,12 +99,3 @@ func ZipDir(srcDir, destZip string) (err error) {
 		return err
 	})
 }
-
-
-func main() {
-	if err := ZipDir("./my_folder", "./my_folder.zip"); err != nil {
-		fmt.Fprintln(os.Stderr, "error:", err)
-		os.Exit(1)
-	}
-	fmt.Println("archive created")
-}
