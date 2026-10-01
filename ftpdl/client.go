@@ -78,7 +78,7 @@ func downloadFile(c *ftp.ServerConn, remotePath, localPath string) (err error) {
 	return nil
 }
 
-func ConnectAndDownloadDir(addr string,port int, remoteDir, localDir string) error{
+func ConnectAndDownloadDir(addr string,port int,user string, password string, remoteDir, localDir string) error{
 
 	connectionString := fmt.Sprintf("%s:%d", addr, port)
 	c, err := ftp.Dial(connectionString, ftp.DialWithTimeout(10*time.Second))
@@ -87,6 +87,10 @@ func ConnectAndDownloadDir(addr string,port int, remoteDir, localDir string) err
 		return err
 	}
 	defer c.Quit()
+	if err := c.Login(user,password); err != nil {
+ 		log.Printf("Failed to login to FTP server: %s as %s",addr,user)
+		return err
+	}
 
 	if err := DownloadDir(c, remoteDir, localDir); err != nil {
 		log.Printf("Failed to download %s from %s",remoteDir,addr)

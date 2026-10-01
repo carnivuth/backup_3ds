@@ -58,7 +58,12 @@ func BackupEngine(backupNotificationChannel chan ConsoleConfig) {
 
 func BackupConsole(console ConsoleConfig, dir string){
 	log.Printf("coping %s from %s",dir,console.Name)
-	ftpdl.ConnectAndDownloadDir(console.Name,console.Port,dir,filepath.Join("/var/lib/console_backupper",console.Name,dir))
+	if err := ftpdl.ConnectAndDownloadDir(console.Name,console.Port,console.User,console.Password,dir,filepath.Join("/var/lib/console_backupper",console.Name,dir)); err != nil {
+		log.Printf("error in downloading %s from %s error: %v",dir,console.Name,err )
+	}
+
+
+
 	// TODO: copy content recursively from ftp server
 	log.Printf("archiving %s",dir)
 	// TODO: archive the content in a tar.gz file
