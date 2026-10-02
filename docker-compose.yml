@@ -5,6 +5,7 @@ services:
     build: ./
     ports:
       - 8080:8080
+    env_file: .env
     volumes:
       - "/tmp/console_backupper:/var/lib/console_backupper"
       - "./config.yml:/etc/console_backupper/config.yml:ro"
