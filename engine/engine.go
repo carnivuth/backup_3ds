@@ -2,6 +2,7 @@ package engine
 
 import (
 	"console_backupper/model"
+	"console_backupper/notification"
 	"log"
 	"time"
 )
@@ -13,6 +14,7 @@ func Engine(
 	startBackupsTimer *time.Ticker,
 	resetBackupsTimer *time.Ticker,
 	pruneNotificationChannel chan *model.ConsoleConfig,
+	messageNotificationChannel chan notification.NotificationChannel,
 	quitChannel chan bool,
 	dataDir string,
 	cacheDir string,
@@ -29,7 +31,9 @@ func Engine(
 			case <-resetBackupsTimer.C:
 				go config.ResetBackupStates()
 			case consoleToBackup := <- backupNotificationChannel:
-				go consoleToBackup.BackupConsole(dataDir,cacheDir,pruneNotificationChannel)
+				go consoleToBackup.BackupConsole(dataDir,cacheDir,messageNotificationChannel,pruneNotificationChannel)
+			case message := <- messageNotificationChannel:
+				go message.Send()
 			case consoleToPrune := <- pruneNotificationChannel:
 				go consoleToPrune.PruneBackups(dataDir,backupsToKeep)
 			case <-quitChannel:

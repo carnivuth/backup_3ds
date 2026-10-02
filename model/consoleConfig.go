@@ -1,17 +1,19 @@
 package model
 
 import (
-	"sync"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
-	"time"
 	"sort"
-	"fmt"
+	"strings"
+	"sync"
+	"time"
 
 	"console_backupper/compress"
 	"console_backupper/ftpdl"
+	"console_backupper/notification"
+	"console_backupper/utils"
 )
 
 type ConsoleConfig struct {
@@ -23,7 +25,11 @@ type ConsoleConfig struct {
 	RunningBackup sync.Mutex `yaml:"-"`
 	DoneBackup bool `yaml:"-"`
 }
-func (console *ConsoleConfig) BackupConsole(dataDir string,cacheDir string,pruneNotificationChannel chan *ConsoleConfig){
+func (console *ConsoleConfig) GetEscapedDir(dir string) string {
+			return strings.Replace(dir,"/","-",-1)
+}
+
+func (console *ConsoleConfig) BackupConsole(dataDir string,cacheDir string,messageNotificationChannel chan notification.NotificationChannel, pruneNotificationChannel chan *ConsoleConfig){
 
 	if console.DoneBackup{
 		log.Printf("Backup for %s already done, skipping",console.Name)
@@ -57,6 +63,12 @@ func (console *ConsoleConfig) BackupConsole(dataDir string,cacheDir string,prune
 
 			log.Printf("archive %s created",zipFileName)
 			console.DoneBackup = true
+			telegramMessage := notification.TelegramNotification{
+				Message: fmt.Sprintf("Console %s Backup of %s completed successfully",console.Name,dir),
+				ChatID: utils.Getenv("CONSOLE_BACKUPPER_TELEGRAM_CHAT_ID",""),
+				Token: utils.Getenv("CONSOLE_BACKUPPER_TELEGRAM_TOKEN",""),
+			}
+			messageNotificationChannel <- telegramMessage
 			pruneNotificationChannel <- console
 		}
 	}
@@ -111,4 +123,16 @@ func (console *ConsoleConfig) PruneBackups(dataDir string, backupsToKeep int) er
 		}
 	}
 	return nil
+}
+
+func (console *ConsoleConfig) GetBackupsByDir(dir string ) ([]os.DirEntry, error) {
+
+	// return ReadDir for the given console dir pair
+	dataDir := utils.Getenv("CONSOLE_BACKUPPER_DATA_DIR","/var/lib/console_backupper")
+	backups, err := os.ReadDir(filepath.Join(dataDir,console.Name,console.GetEscapedDir(dir)))
+	if err != nil {
+		log.Printf("error reading dir: %s",filepath.Join(dataDir,console.Name,console.GetEscapedDir(dir)))
+		return nil, err
+	}
+	return backups, nil
 }

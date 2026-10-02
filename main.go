@@ -6,6 +6,7 @@ import (
 	"console_backupper/model"
 	"console_backupper/utils"
 	"console_backupper/web"
+	"console_backupper/notification"
 	"log"
 	"net/http"
 	"strconv"
@@ -37,11 +38,24 @@ func main() {
 
 	backupNotificationChannel := make(chan *model.ConsoleConfig)
 	pruneNotificationChannel := make(chan *model.ConsoleConfig)
+	messageNotificationChannel := make(chan notification.NotificationChannel)
 	quitChannel := make(chan bool, 1)
 	startBackupsTimer := time.NewTicker(time.Duration(backupInterval) * time.Minute)
 	resetBackupsTimer := time.NewTicker(time.Duration(resetInterval) * time.Minute)
 
-	go engine.Engine(configFilePath,backupNotificationChannel,startBackupsTimer,resetBackupsTimer,pruneNotificationChannel,quitChannel,dataDir,cacheDir,backupsToKeep)
+	go engine.Engine(
+		configFilePath,
+		backupNotificationChannel,
+		startBackupsTimer,
+		resetBackupsTimer,
+		pruneNotificationChannel,
+		messageNotificationChannel,
+		quitChannel,
+		dataDir,
+		cacheDir,
+		backupsToKeep,
+	)
+
 
 	http.HandleFunc("/", web.HomeHandler)
 	http.HandleFunc("/consoles/{console}", web.ConsoleHandler)
