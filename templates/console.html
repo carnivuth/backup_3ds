@@ -20,16 +20,18 @@
 
     <div class="list">
 
-      {{ range .Dirs }}
-      <a href='/dirs/{{ $.Name }}/{{ . }}'>
+      {{ range $dir := .Dirs }}
+      {{ range $backup := $.GetBackupsByDir . }}
+      <a href='/downloads/{{ $.Name }}/{{ $.GetEscapedDir $dir }}/{{ $backup.Name }}'>
                   <div class='item'>
                     <div class='item-icon' style='background:rgba(200,255,94,0.12)'>💾</div>
                     <div class='item-body'>
-                      <div class='item-name'>{{ . }}</div>
+                      <div class='item-name'>{{ $backup.Name }}</div>
                     </div>
                   </div>
                 </a>
 
+      {{ end }}
       {{ end }}
     </div>
   </div>
