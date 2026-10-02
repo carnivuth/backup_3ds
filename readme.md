@@ -1,26 +1,17 @@
-# Backup 3DS
+# Console Backupper
 
-Make backups of 3ds and psvita using ftpd periodically, all in docker container 🐳
+Make backups of modded consoles using ftp, all in docker container 🐳
 
 ![](./demo/demo.gif)
 
 ## Features
 
-- **Automated Backups**: Uses cron to run a backup script
-- **FTP-Based Transfer**: data are copied from the 3DS via ftp exposed by [FTPD](https://github.com/mtheall/ftpd)
+- **Automated Backups**: search for active consoles and tries to backup them
+- **FTP-Based Transfer**: data are copied from the consoles via ftp
 - **Automated pruning of old backups**: data are pruned periodically based on [configuration parameters](#Configuration-parameters)
 - **Docker Containerized**: Easy deployment with Docker and Docker Compose
 - **Low Maintenance**: Set it and forget it - backups run automatically in the background
 - **Very ugly dashboard**: Static web interface to download backups
-
-## Prerequisites
-
-Before using this backup solution, ensure you have:
-
-- A Nintendo 3DS with [FTPD](https://github.com/mtheall/ftpd) installed and running/a psvita with vitashell
-- Docker and Docker Compose installed on your system
-- Your 3DS/psvita and backup server on the same local network
-- The IP address and port of your 3DS FTPD/psvita vitashell server
 
 ## Installation
 
@@ -31,16 +22,17 @@ Just copy and paste this compose file and customize variables and mountpoints as
 ```yaml
 ---
 services:
-  backup_3ds:
-    container_name: backup_3ds
-    image: carnivuth/backup_3ds:latest
+  console_backupper:
+    container_name: console_backupper
+    image: carnivuth/console_backupper:latest
     environment:
       # to enable dashboard add this
       #- ENABLE_DASHBOARD=true
     volumes:
       # where backups are stored
-      - "your data directory:/var/lib/backup_3ds/backups"
-      - "your configuration file :/etc/backup_3ds/config.yml:ro"
+      - "your data directory:/var/lib/console_backupper/"
+      - "your cache directory:/var/cache/console_backupper/"
+      - "your configuration file :/etc/console_backupper/config.yml:ro"
 ```
 
 - configuration file sample:
@@ -49,7 +41,7 @@ services:
 ---
 consoles:
   - name: my.psvita.local
-    port: 1337 # defaults to 21
+    port: 1337
     # optionally set user and password
     # user: user
     # password: password
@@ -68,43 +60,11 @@ Alternatively, you can run the container directly with Docker:
 
 ```bash
 docker run -d \
-  --name backup_3ds \
-  -v ./data:/var/lib/backup_3ds/backups \
-  -v ./config.yml:/etc/backup_3ds/config.ymlc\
-  carnivuth/backup_3ds:latest
-```
-
-### Finding Your 3DS FTPD Information
-
-To find your 3DS IP address and port:
-
-1. Launch FTPD on your Nintendo 3DS
-2. On the top screen, you'll see:
-   - **IP Address** (highlighted in blue) - Use this for `FTPD_3DS_ADDRESSES`
-   - **Port** (highlighted in red) - Use this for `FTPD_3DS_PORTS`
-3. Keep FTPD running on your 3DS while backups are being performed
-
-**Note**: Ensure your 3DS and the Docker host are on the same local network.
-
-### Change default backup schedule
-
-The backup schedule is controlled by the `crontab` file in the container. By default, backups run periodically based on the cron configuration. To customize the backup schedule, you can:
-
-1. Mount a custom `crontab` file as a volume in `/etc/crontab`
-
-## Troubleshooting
-
-### FTPD Not Responding
-
-- FTPD on 3DS may timeout after inactivity - restart it before scheduled backups
-- Some routers assign different IPs - consider setting a static IP for your 3DS
-
-### Permission Issues
-
-If you encounter permission errors with the backup directory:
-
-```bash
-sudo chown -R $(id -u):$(id -g) ./YOUR-DATA-DIR
+  --name console_backupper \
+  -v ./data:/var/lib/console_backupper \
+  -v ./cache:/var/cache/console_backupper \
+  -v ./config.yml:/etc/console_backupper/config.ymlc\
+  carnivuth/console_backupper:latest
 ```
 
 ## License
