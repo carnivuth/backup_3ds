@@ -63,12 +63,20 @@ func (console *ConsoleConfig) BackupConsole(dataDir string,cacheDir string,messa
 
 			log.Printf("archive %s created",zipFileName)
 			console.DoneBackup = true
-			telegramMessage := notification.TelegramNotification{
-				Message: fmt.Sprintf("Console %s Backup of %s completed successfully",console.Name,dir),
-				ChatID: utils.Getenv("CONSOLE_BACKUPPER_TELEGRAM_CHAT_ID",""),
-				Token: utils.Getenv("CONSOLE_BACKUPPER_TELEGRAM_TOKEN",""),
+
+			telegramChatID := utils.Getenv("CONSOLE_BACKUPPER_TELEGRAM_CHAT_ID","")
+			telegramToken := utils.Getenv("CONSOLE_BACKUPPER_TELEGRAM_TOKEN","")
+			if telegramChatID != "" && telegramToken != "" {
+				telegramMessage := notification.TelegramNotification{
+					Message: fmt.Sprintf("Console %s Backup of %s completed successfully",console.Name,dir),
+					ChatID: utils.Getenv("CONSOLE_BACKUPPER_TELEGRAM_CHAT_ID",""),
+					Token: utils.Getenv("CONSOLE_BACKUPPER_TELEGRAM_TOKEN",""),
+				}
+				messageNotificationChannel <- telegramMessage
+			} else {
+				log.Printf("Telegram parameters not set, message not sent")
 			}
-			messageNotificationChannel <- telegramMessage
+
 			pruneNotificationChannel <- console
 		}
 	}
